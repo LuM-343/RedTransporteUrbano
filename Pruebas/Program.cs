@@ -98,28 +98,17 @@ grafo.AgregarParada(p7);
 Console.WriteLine($"Paradas registradas: {grafo.CantidadParadas}");
 
 // Registrar Rutas con doble peso (Tiempo en min, Costo en Q)
-// Conexiones:
-// PAR-01 <---> PAR-02 (Bidireccional: 12 min, Q2.50)
-// PAR-01 ---> PAR-04  (Dirigida: 8 min, Q2.00)
-// PAR-02 <---> PAR-03 (Bidireccional: 15 min, Q3.00)
-// PAR-04 ---> PAR-05  (Dirigida: 5 min, Q1.50)
-// PAR-03 ---> PAR-06  (Dirigida: 20 min, Q4.00)
-// PAR-05 ---> PAR-03  (Dirigida: 10 min, Q2.50)
+// Vía A: PAR-01 <-> PAR-02 (12m, Q2.50) y PAR-02 <-> PAR-03 (15m, Q3.00) => Total: 27 min, Q5.50 (Más barata)
+// Vía B: PAR-01 -> PAR-04 (8m, Q2.00) -> PAR-05 (5m, Q1.50) -> PAR-03 (10m, Q3.50) => Total: 23 min, Q7.00 (Más rápida)
 grafo.AgregarRuta("PAR-01", "PAR-02", tiempo: 12.0, costo: 2.50, esBidireccional: true);
 grafo.AgregarRuta("PAR-01", "PAR-04", tiempo: 8.0, costo: 2.00, esBidireccional: false);
 grafo.AgregarRuta("PAR-02", "PAR-03", tiempo: 15.0, costo: 3.00, esBidireccional: true);
 grafo.AgregarRuta("PAR-04", "PAR-05", tiempo: 5.0, costo: 1.50, esBidireccional: false);
+grafo.AgregarRuta("PAR-05", "PAR-03", tiempo: 10.0, costo: 3.50, esBidireccional: false);
 grafo.AgregarRuta("PAR-03", "PAR-06", tiempo: 20.0, costo: 4.00, esBidireccional: false);
-grafo.AgregarRuta("PAR-05", "PAR-03", tiempo: 10.0, costo: 2.50, esBidireccional: false);
 
 Console.WriteLine("\nConexiones salientes desde PAR-01 (El Trébol):");
 foreach (AristaRuta arista in grafo.ObtenerRutasSalientes("PAR-01"))
-{
-    Console.WriteLine($"  {arista}");
-}
-
-Console.WriteLine("\nConexiones salientes desde PAR-02 (Plaza España):");
-foreach (AristaRuta arista in grafo.ObtenerRutasSalientes("PAR-02"))
 {
     Console.WriteLine($"  {arista}");
 }
@@ -149,15 +138,66 @@ foreach (Parada p in dfs)
 }
 Console.WriteLine("FIN");
 
-// Probar parada aislada (PAR-07)
-Console.WriteLine("\nRecorrido BFS desde parada aislada (PAR-07):");
-ListaPropia<Parada> bfsAislado = grafo.RecorridoBFS("PAR-07");
-Console.Write("  Orden BFS (debe contener solo PAR-07): ");
-foreach (Parada p in bfsAislado)
-{
-    Console.Write($"{p.Codigo} ");
-}
+
+// -------------------------------------------------------------
+// 5. PRUEBAS DE ALGORITMO DE DIJKSTRA (Día 2 - Dev 3)
+// -------------------------------------------------------------
+Console.WriteLine("\n>>> 5. PRUEBAS DE ALGORITMO DE DIJKSTRA PARAMETRIZADO");
+
+// Prueba A: Optimizar por MENOR TIEMPO (Debe elegir Vía B: PAR-01 -> PAR-04 -> PAR-05 -> PAR-03 con 23 min)
+Console.WriteLine("\n[Caso 1] Ruta óptima PAR-01 -> PAR-03 (Optimizando por TIEMPO):");
+ResultadoRuta rutaTiempo = grafo.CalcularDijkstra("PAR-01", "PAR-03", optimizarPorTiempo: true);
+Console.WriteLine($"  ¿Existe ruta?: {rutaTiempo.ExisteRuta}");
+Console.WriteLine($"  Camino: {rutaTiempo.ResumenCamino}");
+Console.WriteLine($"  Tiempo total: {rutaTiempo.TiempoTotalMinutos:F1} min (Criterio optimizado)");
+Console.WriteLine($"  Costo total: Q{rutaTiempo.CostoTotal:F2}");
+Console.Write("  Secuencia en ListaPropia: ");
+foreach (string cod in rutaTiempo.SecuenciaCodigosParadas) Console.Write($"[{cod}] ");
 Console.WriteLine();
+
+// Prueba B: Optimizar por MENOR COSTO (Debe elegir Vía A: PAR-01 -> PAR-02 -> PAR-03 con Q5.50)
+Console.WriteLine("\n[Caso 2] Ruta óptima PAR-01 -> PAR-03 (Optimizando por COSTO):");
+ResultadoRuta rutaCosto = grafo.CalcularDijkstra("PAR-01", "PAR-03", optimizarPorTiempo: false);
+Console.WriteLine($"  ¿Existe ruta?: {rutaCosto.ExisteRuta}");
+Console.WriteLine($"  Camino: {rutaCosto.ResumenCamino}");
+Console.WriteLine($"  Tiempo total: {rutaCosto.TiempoTotalMinutos:F1} min");
+Console.WriteLine($"  Costo total: Q{rutaCosto.CostoTotal:F2} (Criterio optimizado)");
+Console.Write("  Secuencia en ListaPropia: ");
+foreach (string cod in rutaCosto.SecuenciaCodigosParadas) Console.Write($"[{cod}] ");
+Console.WriteLine();
+
+// Prueba C: Ruta hasta PAR-06
+Console.WriteLine("\n[Caso 3] Ruta óptima PAR-01 -> PAR-06 (Optimizando por TIEMPO):");
+ResultadoRuta rutaUniversidad = grafo.CalcularDijkstra("PAR-01", "PAR-06", optimizarPorTiempo: true);
+Console.WriteLine($"  ¿Existe ruta?: {rutaUniversidad.ExisteRuta}");
+Console.WriteLine($"  Camino: {rutaUniversidad.ResumenCamino}");
+Console.WriteLine($"  Tiempo total: {rutaUniversidad.TiempoTotalMinutos:F1} min");
+Console.WriteLine($"  Costo total: Q{rutaUniversidad.CostoTotal:F2}");
+
+// Prueba D: Sentido contrario en vía unidireccional (PAR-06 a PAR-01 es imposible)
+Console.WriteLine("\n[Caso 4] Ruta contraria PAR-06 -> PAR-01 (Vía de sentido único):");
+ResultadoRuta rutaImposible = grafo.CalcularDijkstra("PAR-06", "PAR-01", optimizarPorTiempo: true);
+Console.WriteLine($"  ¿Existe ruta?: {rutaImposible.ExisteRuta}");
+Console.WriteLine($"  Mensaje: {rutaImposible.MensajeEstado}");
+
+// Prueba E: Nodo aislado desconectado (PAR-01 a PAR-07)
+Console.WriteLine("\n[Caso 5] Ruta hacia parada aislada PAR-01 -> PAR-07:");
+ResultadoRuta rutaAislada = grafo.CalcularDijkstra("PAR-01", "PAR-07", optimizarPorTiempo: true);
+Console.WriteLine($"  ¿Existe ruta?: {rutaAislada.ExisteRuta}");
+Console.WriteLine($"  Mensaje: {rutaAislada.MensajeEstado}");
+
+// Prueba F: Origen igual a Destino (PAR-02 a PAR-02)
+Console.WriteLine("\n[Caso 6] Mismo origen y destino PAR-02 -> PAR-02:");
+ResultadoRuta rutaMismoNodo = grafo.CalcularDijkstra("PAR-02", "PAR-02", optimizarPorTiempo: true);
+Console.WriteLine($"  ¿Existe ruta?: {rutaMismoNodo.ExisteRuta}");
+Console.WriteLine($"  Camino: {rutaMismoNodo.ResumenCamino}");
+Console.WriteLine($"  Tiempo: {rutaMismoNodo.TiempoTotalMinutos} min | Costo: Q{rutaMismoNodo.CostoTotal:F2}");
+
+// Prueba G: Código inexistente
+Console.WriteLine("\n[Caso 7] Código de parada inexistente (PAR-99 -> PAR-01):");
+ResultadoRuta rutaInvalida = grafo.CalcularDijkstra("PAR-99", "PAR-01", optimizarPorTiempo: true);
+Console.WriteLine($"  ¿Existe ruta?: {rutaInvalida.ExisteRuta}");
+Console.WriteLine($"  Mensaje: {rutaInvalida.MensajeEstado}");
 
 Console.WriteLine("\n==============================================================");
 Console.WriteLine("             TODAS LAS PRUEBAS FINALIZADAS CON ÉXITO");
