@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Pruebas/Pruebas.csproj" />
+  <Project Path="TransporteUrbanoEDD.Core/TransporteUrbanoEDD.Core.csproj" />
+</Solution>
