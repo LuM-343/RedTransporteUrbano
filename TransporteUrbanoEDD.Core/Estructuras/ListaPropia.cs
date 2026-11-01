@@ -47,5 +47,38 @@ namespace TransporteUrbanoEDD.Core.Estructuras
 
             Count++;
         }
+
+        public T Obtener(int indice)
+        {
+            if (indice < 0 || indice >= Count) // Validar rango
+            {
+                throw new ArgumentOutOfRangeException(nameof(indice), ">> Índice fuera de rango");
+            }
+
+            NodoLista<T> actual = cabeza!;
+            for (int i = 0; i < indice; i++) // Avanzar 'indice' veces
+            {
+                actual = actual.Siguiente!;
+            }
+
+            return actual.Dato;
+        }
+
+        // Indica si el dato existe en la lista: O(n)
+        public bool Contiene(T dato)
+        {
+            NodoLista<T>? actual = cabeza;
+            while (actual!= null) // Recorrer hasta el final
+            {
+                if (EqualityComparer<T>.Default.Equals(actual.Dato, dato))
+                {
+                    return true; // Encontrado
+                }
+
+                actual = actual.Siguiente;
+            }
+
+            return false; // Llegó al final sin encontrarlo
+        }
     }
 }
