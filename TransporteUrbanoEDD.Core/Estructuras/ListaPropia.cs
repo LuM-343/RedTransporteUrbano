@@ -1,7 +1,6 @@
 // Lista enlazada propia
-using System.ComponentModel;
-
 namespace TransporteUrbanoEDD.Core.Estructuras
+
 {
     // Nodo: guarda un dato y el enlace al siguiente
     public class NodoLista<T>
@@ -79,6 +78,38 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             }
 
             return false; // Llegó al final sin encontrarlo
+        }
+
+        public bool Eliminar(T dato)
+        {
+            NodoLista<T>? anterior = null;
+            NodoLista<T>? actual = cabeza;
+
+            while (actual != null)
+            {
+                if (EqualityComparer<T>.Default.Equals(actual.Dato, dato))
+                {
+                    if (anterior == null) // Caso 1: era la cabeza
+                    {
+                        cabeza = actual.Siguiente;
+                    }
+                    else // Caso 2: saltar el nodo
+                    {
+                        anterior.Siguiente = actual.Siguiente;
+                    }
+
+                    if (actual == cola) // Caso 3: era el último
+                    {
+                        cola = anterior;
+                    }
+
+                    Count--;
+                    return true;
+                }
+                anterior = actual;  // Avanzar ambos punteros
+                actual = actual.Siguiente;
+            }
+            return false; // No existe
         }
     }
 }
