@@ -15,7 +15,7 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         }
     }
 
-    public class ListaPropia<T>
+    public class ListaPropia<T> : IEnumerable<T> // Permite usar foreach
     {
         private NodoLista<T>? cabeza; // Primer nodo
         private NodoLista<T>? cola; // Último nodo (agregar en O(1))
@@ -111,5 +111,19 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             }
             return false; // No existe
         }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            NodoLista<T>? actual = cabeza;
+            while (actual != null)
+            {
+                yield return actual.Dato; // Entrega el dato y pausa
+                actual = actual.Siguiente; // Continúa aquí en la siguiente vuelta
+            }
+        }
+
+        // Versión no genérica que exige la interfaz; reutilizar la de arriba
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+            => GetEnumerator();
     }
 }

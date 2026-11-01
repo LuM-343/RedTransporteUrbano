@@ -23,7 +23,9 @@ lista.Agregar("PAR-06"); Imprimir("Reusar vacía"); // PAR-06
 void Imprimir(string titulo)
 {
     Console.Write($"{titulo} [{lista.Count}]: ");
-    for (int i = 0; i < lista.Count; i++)
-        Console.Write(lista.Obtener(i) + " ");
+    foreach (string codigo in lista)
+    {
+        Console.Write(codigo + " ");
+    }
     Console.WriteLine();
 }
