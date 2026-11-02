@@ -1,4 +1,5 @@
 // ============================================================
+// I1
 // Conjuntos disjuntos (Union-Find) para zonas conectadas.
 // Dos paradas están en la misma zona si existe una cadena de
 // rutas que las une. Find con compresión de caminos y

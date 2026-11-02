@@ -1,5 +1,8 @@
+// ============================================================
+// I1
 // Tabla Hash de paradas indexada por Código ("PAR-01").
 // Colisiones: encadenamiento separado con ListaPropia.
+// ============================================================
 
 using TransporteUrbanoEDD.Core.Modelos;
 

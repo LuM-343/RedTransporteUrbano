@@ -11,4 +11,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- Copia los CSV del Core a la carpeta de salida (bin/.../Datos) al compilar -->
+  <ItemGroup>
+    <None Include="..\TransporteUrbanoEDD.Core\Datos\*.csv"
+          LinkBase="Datos"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

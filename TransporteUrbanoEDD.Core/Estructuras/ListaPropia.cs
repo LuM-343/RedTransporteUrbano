@@ -1,5 +1,7 @@
-// Integrante 1: Arenz Peláez
+// ============================================================
+// I1
 // Lista enlazada propia
+// ============================================================
 
 namespace TransporteUrbanoEDD.Core.Estructuras
 {

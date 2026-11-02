@@ -1,0 +1,21 @@
+Codigo,Nombre,X,Y,Zona
+PAR-01,Parque Central,400,260,Zona 1
+PAR-02,Catedral,430,240,Zona 1
+PAR-03,Teatro Municipal,380,200,Zona 1
+PAR-04,Mercado La Democracia,300,150,Zona 3
+PAR-05,Terminal Minerva,180,120,Zona 3
+PAR-06,Templo de Minerva,210,170,Zona 3
+PAR-07,Parque Benito Juarez,280,210,Zona 3
+PAR-08,Monumento a la Marimba,260,290,Zona 3
+PAR-09,Calvario,350,320,Zona 1
+PAR-10,Cementerio General,320,380,Zona 1
+PAR-11,Hospital Regional,480,330,Zona 8
+PAR-12,Estadio Mario Camposeco,500,180,Zona 1
+PAR-13,Pradera Xela,560,260,Zona 9
+PAR-14,Interplaza Xela,620,200,Zona 9
+PAR-15,Utz Ulew,590,330,Zona 9
+PAR-16,URL Campus Quetzaltenango,680,280,Zona 9
+PAR-17,Llano del Pinal,700,390,Zona 10
+PAR-18,Las Rosas,540,410,Zona 7
+PAR-19,Almolonga,150,440,Rural
+PAR-20,Zunil,90,500,Rural

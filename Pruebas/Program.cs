@@ -2,6 +2,7 @@
 using System;
 using TransporteUrbanoEDD.Core.Estructuras;
 using TransporteUrbanoEDD.Core.Modelos;
+using TransporteUrbanoEDD.Core.Archivos;
 
 Console.WriteLine("==============================================================");
 Console.WriteLine("    RED DE TRANSPORTE URBANO - PRUEBAS DE ESTRUCTURAS DE DATOS");
@@ -328,3 +329,28 @@ Console.WriteLine("  Tras eliminar ruta PAR-02 - PAR-03 y reconstruir:");
 Console.WriteLine($"  ¿PAR-01 y PAR-02 misma zona? {ufZ.EstanEnMismaZona("PAR-01", "PAR-02")}"); // True
 Console.WriteLine($"  ¿PAR-01 y PAR-03 misma zona? {ufZ.EstanEnMismaZona("PAR-01", "PAR-03")}"); // False
 Console.WriteLine($"  Zonas: {ufZ.CantidadZonas}"); // 3: {01,02} {03} {04}
+
+// -------------------------------------------------------------
+// PRUEBAS DE CARGADOR (Dev 1) - Bloque 2: registro manual
+// -------------------------------------------------------------
+Console.WriteLine("\n>>> PRUEBAS DE REGISTRO EN LAS 4 ESTRUCTURAS (CargadorCSV)");
+TablaHashParadas hashR = new TablaHashParadas();
+GrafoTransporte grafoR = new GrafoTransporte();
+UnionFindZonas ufR = new UnionFindZonas(16, hashR);
+TrieParadas trieR = new TrieParadas();
+CargadorCSV cargadorR = new CargadorCSV(hashR, grafoR, ufR, trieR);
+
+Parada pc = new Parada("PAR-01", "Parque Central", 400, 260, "Zona 1");
+Console.WriteLine($"  Registrar PAR-01: {cargadorR.RegistrarParada(pc) ?? "OK"}");                      // OK
+Console.WriteLine($"  Registrar PAR-02: {cargadorR.RegistrarParada(new Parada("PAR-02", "Catedral", 430, 240)) ?? "OK"}"); // OK
+Console.WriteLine($"  Registrar PAR-03: {cargadorR.RegistrarParada(new Parada("PAR-03", "Zunil", 90, 500)) ?? "OK"}");    // OK
+Console.WriteLine($"  Registrar PAR-01 otra vez: {cargadorR.RegistrarParada(new Parada("PAR-01", "Repetida")) ?? "OK"}"); // ya existe
+Console.WriteLine($"  Indice de PAR-01: {pc.Indice}");                                                  // 0
+
+Console.WriteLine($"  Ruta PAR-01 -> PAR-02: {cargadorR.RegistrarRuta("PAR-01", "PAR-02", 3, 1.75, true) ?? "OK"}");  // OK
+Console.WriteLine($"  Ruta PAR-01 -> PAR-99: {cargadorR.RegistrarRuta("PAR-01", "PAR-99", 3, 1.75, true) ?? "OK"}");  // no existe
+Console.WriteLine($"  Ruta PAR-01 -> PAR-01: {cargadorR.RegistrarRuta("PAR-01", "par-01", 3, 1.75, true) ?? "OK"}");  // misma parada
+
+Console.WriteLine($"  Hash: {hashR.Cantidad} | Grafo: {grafoR.CantidadParadas} | UF: {ufR.Cantidad} | Zonas: {ufR.CantidadZonas}"); // 3 | 3 | 3 | 2
+Console.WriteLine($"  ¿PAR-01 y PAR-02 misma zona? {ufR.EstanEnMismaZona("PAR-01", "PAR-02")}");  // True
+Console.WriteLine($"  ¿PAR-01 y PAR-03 misma zona? {ufR.EstanEnMismaZona("PAR-01", "PAR-03")}");  // False
