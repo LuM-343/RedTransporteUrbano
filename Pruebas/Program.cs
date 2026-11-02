@@ -270,3 +270,27 @@ Console.Write("\n  ObtenerTodas: ");
 foreach (Parada p in chica.ObtenerTodas())
     Console.Write(p.Codigo + " ");
 Console.WriteLine($"({chica.ObtenerTodas().Count} paradas)"); // 7 paradas, sin PAR-05
+
+// -------------------------------------------------------------
+// PRUEBAS DE UNION-FIND (Dev 1) - Bloque 1
+// -------------------------------------------------------------
+Console.WriteLine("\n>>> PRUEBAS DE UNION-FIND (UnionFindZonas)");
+UnionFindZonas uf = new UnionFindZonas(4); // Capacidad 4 para probar que crece
+
+for (int i = 0; i < 7; i++)
+    uf.AgregarElemento();                  // Elementos 0..6, cada uno su propia zona
+Console.WriteLine($"  Elementos: {uf.Cantidad} | Zonas: {uf.CantidadZonas}"); // 7 | 7
+
+// Rutas: 0-1, 1-2, 3-4  → zonas {0,1,2} {3,4} {5} {6}
+uf.Union(0, 1);
+uf.Union(1, 2);
+uf.Union(3, 4);
+Console.WriteLine($"  Zonas tras 3 uniones: {uf.CantidadZonas}");          // 4
+Console.WriteLine($"  ¿0 y 2 conectadas? {uf.EstanConectadas(0, 2)}");      // True (vía 1)
+Console.WriteLine($"  ¿0 y 3 conectadas? {uf.EstanConectadas(0, 3)}");      // False
+Console.WriteLine($"  ¿Union(0,2) repetida fusionó? {uf.Union(0, 2)}");     // False (ya estaban)
+
+uf.Union(2, 4); // Une {0,1,2} con {3,4}
+Console.WriteLine($"  Tras Union(2,4): ¿0 y 3 conectadas? {uf.EstanConectadas(0, 3)}"); // True
+Console.WriteLine($"  Zonas: {uf.CantidadZonas}");                          // 3: {0..4} {5} {6}
+Console.WriteLine($"  ¿6 aislada de 0? {!uf.EstanConectadas(6, 0)}");       // True
