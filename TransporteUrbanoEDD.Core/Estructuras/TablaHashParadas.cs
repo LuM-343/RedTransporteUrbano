@@ -31,6 +31,9 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         /// </summary>
         public double FactorCarga => (double)Cantidad / Capacidad;
 
+        /// <summary>Cuántas veces se ha hecho rehashing (útil para mostrar en la UI).</summary>
+        public int Rehashes { get; private set; }
+
         /// <param name="capacidadInicial">Conviene que sea primo para repartir mejor (ej. 11).</param>
         public TablaHashParadas(int capacidadInicial = 11)
         {
@@ -82,6 +85,11 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             if (Contiene(parada.Codigo))
                 return false;
 
+            // Si al insertar el factor de carga superaría 0.70, primero se agranda la tabla
+            double factorProyectado = (double)(Cantidad + 1) / Capacidad;
+            if (factorProyectado > FACTOR_CARGA_MAX)
+                Rehashing();
+
             InsertarEnBucket(parada);
             return true;
         }
@@ -126,6 +134,47 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         /// </summary>
         public bool Contiene(string codigo)
             => Buscar(codigo) != null;
+
+        // ---------------------------------------------------------
+        // ELIMINAR
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Elimina la parada con ese código. O(1) promedio.
+        /// Devuelve true si la eliminó, false si no existía.
+        /// </summary>
+        public bool Eliminar(string codigo)
+        {
+            Parada? parada = Buscar(codigo); // 1. Encontrarla en su bucket
+            if (parada == null)
+                return false;
+
+            int indice = FuncionHash(parada.Codigo);
+            buckets[indice].Eliminar(parada);  // 2. Quitarla de la cadena (Parada.Equals compara por código)
+            Cantidad--;
+            return true;
+        }
+
+        // ---------------------------------------------------------
+        // REHASHING
+        // ---------------------------------------------------------
+
+        // Agranda la tabla a (capacidad * 2 + 1) y reubica todas las paradas.
+        // Cada parada se vuelve a pasar por la función hash porque el
+        // % ahora usa la nueva capacidad. O(n), pero ocurre pocas veces.
+        private void Rehashing()
+        {
+            ListaPropia<Parada>[] anteriores = buckets;    // 1. Guardar la tabla vieja
+
+            buckets = CrearBuckets(anteriores.Length * 2 + 1); // 2. Tabla nueva más grande (Capacidad cambia aquí)
+            Cantidad = 0;                                  // 3. Se vuelve a contar al reinsertar
+
+            foreach (ListaPropia<Parada> cadena in anteriores) // 4. Recorrer cada bucket viejo
+                foreach (Parada parada in cadena)              //    y cada parada de su cadena
+                    InsertarEnBucket(parada);                  //    recalculando su bucket nuevo
+
+            Rehashes++;
+        }
 
         // ---------------------------------------------------------
         // AUXILIARES

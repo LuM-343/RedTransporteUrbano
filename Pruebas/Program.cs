@@ -240,3 +240,24 @@ Console.WriteLine($"  ¿Contiene PAR-21? {hash.Contiene("PAR-21")}");     // Tru
 Console.WriteLine($"  ¿Contiene PAR-99? {hash.Contiene("PAR-99")}");     // False
 Console.WriteLine($"  ¿Insertó PAR-01 duplicado? {hash.Insertar(new Parada("PAR-01", "Otra", 0, 0))}"); // False
 Console.WriteLine($"  Cantidad final: {hash.Cantidad}");                 // 5
+
+// --- Bloque 3: Rehashing y Eliminar ---
+Console.WriteLine("\n  Rehashing (tabla pequeña de 5 buckets):");
+TablaHashParadas chica = new TablaHashParadas(5);
+for (int i = 1; i <= 8; i++)
+{
+    chica.Insertar(new Parada($"PAR-{i:D2}", $"Parada {i}"));
+    Console.WriteLine($"    +PAR-{i:D2} -> Cantidad {chica.Cantidad} | Capacidad {chica.Capacidad} | Factor {chica.FactorCarga:F2} | Rehashes {chica.Rehashes}");
+}
+// Esperado: rehash al insertar PAR-04 (4/5 = 0.80 > 0.70): Capacidad 5 -> 11
+
+// Después del rehashing todas deben seguir encontrándose
+bool todas = true;
+for (int i = 1; i <= 8; i++)
+    if (!chica.Contiene($"PAR-{i:D2}")) todas = false;
+Console.WriteLine($"  ¿Todas encontradas tras rehashing? {todas}");          // True
+
+Console.WriteLine($"  ¿Eliminó PAR-05? {chica.Eliminar("PAR-05")}");          // True
+Console.WriteLine($"  ¿Contiene PAR-05? {chica.Contiene("PAR-05")}");         // False
+Console.WriteLine($"  ¿Eliminó PAR-99? {chica.Eliminar("PAR-99")}");          // False
+Console.WriteLine($"  Cantidad final: {chica.Cantidad}");                     // 7
