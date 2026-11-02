@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-
-// Lista propia mínima requerida
-public class ListaPropia<T> : List<T> { } 
+namespace TransporteUrbanoEDD.Core.Estructuras;
 
 public class ParHijoTrie
 {
@@ -43,7 +40,7 @@ public class TrieParadas
             {
                 // Inicializar propiedades required en nodos intermedios
                 hijo = new NodoTrie { NombreOriginal = string.Empty, CodigoParada = string.Empty };
-                actual.Hijos.Add(new ParHijoTrie { Caracter = c, Nodo = hijo });
+                actual.Hijos.Agregar(new ParHijoTrie { Caracter = c, Nodo = hijo });
             }
             actual = hijo;
         }
@@ -53,9 +50,9 @@ public class TrieParadas
         actual.CodigoParada = codigo;
     }
 
-    public List<string> Autocompletar(string prefijo)
+    public ListaPropia<string> Autocompletar(string prefijo)
     {
-        List<string> resultados = new List<string>();
+        ListaPropia<string> resultados = new ListaPropia<string>();
         NodoTrie? actual = raiz;
         string prefijoNormalizado = prefijo.ToLower();
 
@@ -73,11 +70,11 @@ public class TrieParadas
         return resultados;
     }
 
-    private void RecolectarPalabras(NodoTrie nodo, List<string> resultados)
+    private void RecolectarPalabras(NodoTrie nodo, ListaPropia<string> resultados)
     {
         if (nodo.EsFinDePalabra)
         {
-            resultados.Add($"{nodo.NombreOriginal} ({nodo.CodigoParada})");
+            resultados.Agregar($"{nodo.NombreOriginal} ({nodo.CodigoParada})");
         }
 
         foreach (var hijo in nodo.Hijos)

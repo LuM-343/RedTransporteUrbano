@@ -1,3 +1,6 @@
+using TransporteUrbanoEDD.Core.Modelos;
+namespace TransporteUrbanoEDD.Core.Estructuras;
+
 public class OrquestadorTransporte
 {
     public TrieParadas Trie { get; set; } = new TrieParadas();
@@ -18,12 +21,4 @@ public class OrquestadorTransporte
         // 3. Ejecutar Dijkstra en el Grafo
         return Grafo.CalcularDijkstra(codOrigen, codDestino, porTiempo);
     }
-}
-
-// Estructura de apoyo para el retorno
-public class ResultadoRuta
-{
-    public bool ExisteRuta { get; set; }
-    public required string MensajeEstado { get; set; }
-    // Añadir lista de paradas del recorrido, tiempo/distancia total, etc.
 }
