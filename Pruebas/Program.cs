@@ -213,3 +213,13 @@ void ImprimirLista(string titulo, ListaPropia<string> l)
     }
     Console.WriteLine();
 }
+
+// -------------------------------------------------------------
+// PRUEBAS DE TABLA HASH (Dev 1) - Bloque 1: función hash
+// -------------------------------------------------------------
+Console.WriteLine("\n>>> PRUEBAS DE TABLA HASH (TablaHashParadas)");
+TablaHashParadas hash = new TablaHashParadas(11);
+string[] codigos = { "PAR-01", "PAR-02", "PAR-12", "PAR-21", "par-01" };
+foreach (string cod in codigos)
+    Console.WriteLine($"  Hash(\"{cod}\") = bucket {hash.FuncionHash(cod)}");
+Console.WriteLine($"  Capacidad: {hash.Capacidad} | Cantidad: {hash.Cantidad} | Factor: {hash.FactorCarga:F2}");
