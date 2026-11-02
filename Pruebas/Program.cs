@@ -294,3 +294,37 @@ uf.Union(2, 4); // Une {0,1,2} con {3,4}
 Console.WriteLine($"  Tras Union(2,4): ¿0 y 3 conectadas? {uf.EstanConectadas(0, 3)}"); // True
 Console.WriteLine($"  Zonas: {uf.CantidadZonas}");                          // 3: {0..4} {5} {6}
 Console.WriteLine($"  ¿6 aislada de 0? {!uf.EstanConectadas(6, 0)}");       // True
+
+// --- Union-Find Bloque 2: EstanEnMismaZona y Reconstruir ---
+Console.WriteLine("\n  Union-Find con códigos (vinculado a Tabla Hash):");
+TablaHashParadas tablaZ = new TablaHashParadas();
+UnionFindZonas ufZ = new UnionFindZonas(16, tablaZ);
+
+// Registrar 4 paradas: Hash + índice en Union-Find (como lo hará el cargador CSV)
+Parada a = new Parada("PAR-01", "Parque Central");
+Parada b = new Parada("PAR-02", "Terminal Minerva");
+Parada c = new Parada("PAR-03", "La Democracia");
+Parada d = new Parada("PAR-04", "Aislada");
+foreach (Parada p in new[] { a, b, c, d })
+{
+    tablaZ.Insertar(p);
+    p.Indice = ufZ.AgregarElemento();
+}
+
+ufZ.Union(a.Indice, b.Indice); // Ruta PAR-01 - PAR-02
+ufZ.Union(b.Indice, c.Indice); // Ruta PAR-02 - PAR-03
+
+Console.WriteLine($"  ¿PAR-01 y PAR-03 misma zona? {ufZ.EstanEnMismaZona("PAR-01", "par-03")}"); // True
+Console.WriteLine($"  ¿PAR-01 y PAR-04 misma zona? {ufZ.EstanEnMismaZona("PAR-01", "PAR-04")}"); // False
+Console.WriteLine($"  ¿PAR-01 y PAR-99 misma zona? {ufZ.EstanEnMismaZona("PAR-01", "PAR-99")}"); // False (no existe)
+Console.WriteLine($"  Zonas: {ufZ.CantidadZonas}"); // 2: {01,02,03} {04}
+
+// Simular que se eliminó la ruta PAR-02 - PAR-03: reconstruir solo con PAR-01 - PAR-02
+ListaPropia<AristaRuta> rutasRestantes = new ListaPropia<AristaRuta>();
+rutasRestantes.Agregar(new AristaRuta(a, b, 10, 2.5, true));
+ufZ.Reconstruir(4, rutasRestantes);
+
+Console.WriteLine("  Tras eliminar ruta PAR-02 - PAR-03 y reconstruir:");
+Console.WriteLine($"  ¿PAR-01 y PAR-02 misma zona? {ufZ.EstanEnMismaZona("PAR-01", "PAR-02")}"); // True
+Console.WriteLine($"  ¿PAR-01 y PAR-03 misma zona? {ufZ.EstanEnMismaZona("PAR-01", "PAR-03")}"); // False
+Console.WriteLine($"  Zonas: {ufZ.CantidadZonas}"); // 3: {01,02} {03} {04}

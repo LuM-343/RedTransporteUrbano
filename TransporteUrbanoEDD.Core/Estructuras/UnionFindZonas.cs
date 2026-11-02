@@ -4,6 +4,8 @@
 // rutas que las une. Find con compresión de caminos y
 // ============================================================
 
+using TransporteUrbanoEDD.Core.Modelos;
+
 namespace TransporteUrbanoEDD.Core.Estructuras
 {
     /// <summary>
@@ -14,6 +16,7 @@ namespace TransporteUrbanoEDD.Core.Estructuras
     {
         private int[] padre; // padre[i] = padre de i en su árbol; si padre[i] == i, i es raíz
         private int[] rango; // Altura aproximada del árbol cuya raíz es i (solo vale en raíces)
+        private TablaHashParadas? tablaHash; // Para traducir código → Indice en EstanEnMismaZona
 
         /// <summary>
         /// Cantidad de elementos (paradas) registrados.
@@ -26,7 +29,8 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         /// </summary>
         public int CantidadZonas { get; private set; }
 
-        public UnionFindZonas(int capacidadInicial = 16)
+        /// <param name="tablaHash">Tabla donde buscar paradas por código (para EstanEnMismaZona).</param>
+        public UnionFindZonas(int capacidadInicial = 16, TablaHashParadas? tablaHash = null)
         {
             if (capacidadInicial < 1)
                 capacidadInicial = 16;
@@ -35,6 +39,7 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             rango = new int[capacidadInicial];
             Cantidad = 0;
             CantidadZonas = 0;
+            this.tablaHash = tablaHash;
         }
 
         // ---------------------------------------------------------
@@ -119,6 +124,63 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         /// </summary>
         public bool EstanConectadas(int a, int b)
             => Find(a) == Find(b);
+
+        // ---------------------------------------------------------
+        // CONSULTA POR CÓDIGO (contrato del Orquestador)
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Indica si dos paradas (por código) están en la misma zona conectada.
+        /// Traduce cada código a su Indice con la Tabla Hash: O(1) + O(α(n)).
+        /// Devuelve false si alguna no existe o no está registrada.
+        /// </summary>
+        public bool EstanEnMismaZona(string codigoA, string codigoB)
+        {
+            if (tablaHash == null)
+                throw new InvalidOperationException("El Union-Find no tiene una Tabla Hash vinculada");
+
+            // 1. Código → Parada (Tabla Hash, O(1) promedio)
+            Parada? a = tablaHash.Buscar(codigoA);
+            Parada? b = tablaHash.Buscar(codigoB);
+            if (a == null || b == null)
+                return false;
+
+            // 2. La parada debe tener un índice válido en el Union-Find
+            if (a.Indice < 0 || a.Indice >= Cantidad || b.Indice < 0 || b.Indice >= Cantidad)
+                return false;
+
+            // 3. Parada → Indice → misma raíz
+            return EstanConectadas(a.Indice, b.Indice);
+        }
+
+        // ---------------------------------------------------------
+        // RECONSTRUIR (tras eliminar paradas o rutas)
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Reinicia el Union-Find con n elementos separados y vuelve a unir según las rutas.
+        /// Necesario porque Union-Find no puede "separar" zonas al borrar una ruta o parada.
+        /// O(n + m·α(n)), n = paradas, m = rutas.
+        /// </summary>
+        public void Reconstruir(int cantidadElementos, ListaPropia<AristaRuta> rutas)
+        {
+            // 1. Asegurar espacio suficiente
+            while (padre.Length < cantidadElementos)
+                Crecer();
+
+            // 2. Cada elemento vuelve a ser su propia zona
+            for (int i = 0; i < cantidadElementos; i++)
+            {
+                padre[i] = i;
+                rango[i] = 0;
+            }
+            Cantidad = cantidadElementos;
+            CantidadZonas = cantidadElementos;
+
+            // 3. Volver a unir según las rutas existentes (usa el Indice de cada parada)
+            foreach (AristaRuta ruta in rutas)
+                Union(ruta.Origen.Indice, ruta.Destino.Indice);
+        }
 
         // ---------------------------------------------------------
         // AUXILIARES
