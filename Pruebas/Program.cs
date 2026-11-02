@@ -261,3 +261,12 @@ Console.WriteLine($"  ¿Eliminó PAR-05? {chica.Eliminar("PAR-05")}");          
 Console.WriteLine($"  ¿Contiene PAR-05? {chica.Contiene("PAR-05")}");         // False
 Console.WriteLine($"  ¿Eliminó PAR-99? {chica.Eliminar("PAR-99")}");          // False
 Console.WriteLine($"  Cantidad final: {chica.Cantidad}");                     // 7
+
+// --- Bloque 4: ObtenerTodas, ObtenerBucket, Mostrar ---
+Console.WriteLine("\n  Estado de la tabla chica:");
+chica.Mostrar();
+
+Console.Write("\n  ObtenerTodas: ");
+foreach (Parada p in chica.ObtenerTodas())
+    Console.Write(p.Codigo + " ");
+Console.WriteLine($"({chica.ObtenerTodas().Count} paradas)"); // 7 paradas, sin PAR-05

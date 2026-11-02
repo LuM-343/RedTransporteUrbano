@@ -156,6 +156,62 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         }
 
         // ---------------------------------------------------------
+        // CONSULTAS GENERALES (UI, CSV, impresión)
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Devuelve todas las paradas en una lista. O(n + m): recorre los m buckets
+        /// y sus n paradas. Útil para llenar tablas en la UI o guardar el CSV.
+        /// </summary>
+        public ListaPropia<Parada> ObtenerTodas()
+        {
+            ListaPropia<Parada> todas = new ListaPropia<Parada>();
+
+            foreach (ListaPropia<Parada> cadena in buckets) // Cada bucket
+                foreach (Parada parada in cadena)           // Cada parada de su cadena
+                    todas.Agregar(parada);
+
+            return todas;
+        }
+
+        /// <summary>
+        /// Devuelve la cadena de un bucket (para la vista visual de buckets en la UI).
+        /// No modificar la lista devuelta: usar Insertar/Eliminar de la tabla.
+        /// </summary>
+        public ListaPropia<Parada> ObtenerBucket(int indice)
+        {
+            if (indice < 0 || indice >= Capacidad)
+                throw new ArgumentOutOfRangeException(nameof(indice), "Bucket fuera de rango");
+
+            return buckets[indice];
+        }
+
+        /// <summary>
+        /// Imprime en consola el estado de la tabla: cada bucket con su cadena.
+        /// </summary>
+        public void Mostrar()
+        {
+            Console.WriteLine($"  Tabla Hash | Capacidad: {Capacidad} | Paradas: {Cantidad} | " +
+                              $"Factor: {FactorCarga:F2} | Rehashes: {Rehashes}");
+
+            for (int i = 0; i < Capacidad; i++)
+            {
+                Console.Write($"    [{i,2}] ");   // {i,2} alinea el número a 2 espacios
+
+                if (buckets[i].Count == 0)
+                {
+                    Console.WriteLine("VACÍO");
+                    continue;
+                }
+
+                // Mostrar la cadena: PAR-01 -> PAR-14 -> FIN (más de uno = colisión)
+                foreach (Parada parada in buckets[i])
+                    Console.Write($"{parada.Codigo} -> ");
+                Console.WriteLine(buckets[i].Count > 1 ? "FIN  (colisión)" : "FIN");
+            }
+        }
+
+        // ---------------------------------------------------------
         // REHASHING
         // ---------------------------------------------------------
 
