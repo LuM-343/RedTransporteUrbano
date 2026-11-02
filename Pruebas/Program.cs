@@ -223,3 +223,20 @@ string[] codigos = { "PAR-01", "PAR-02", "PAR-12", "PAR-21", "par-01" };
 foreach (string cod in codigos)
     Console.WriteLine($"  Hash(\"{cod}\") = bucket {hash.FuncionHash(cod)}");
 Console.WriteLine($"  Capacidad: {hash.Capacidad} | Cantidad: {hash.Cantidad} | Factor: {hash.FactorCarga:F2}");
+
+// --- Bloque 2: Insertar, Buscar, Contiene ---
+Console.WriteLine("\n  Insertando 5 paradas...");
+hash.Insertar(new Parada("PAR-01", "Parque Central", 100, 200));
+hash.Insertar(new Parada("PAR-02", "Terminal Minerva", 50, 80));
+hash.Insertar(new Parada("PAR-03", "La Democracia", 150, 120));
+hash.Insertar(new Parada("PAR-12", "Calvario", 220, 90));
+hash.Insertar(new Parada("PAR-21", "Templo Minerva", 300, 60));
+Console.WriteLine($"  Cantidad: {hash.Cantidad} | Factor: {hash.FactorCarga:F2}"); // 5 | 0.45
+
+Console.WriteLine($"  Buscar PAR-03: {hash.Buscar("PAR-03")}");          // [PAR-03] La Democracia
+Console.WriteLine($"  Buscar ' par-12 ': {hash.Buscar(" par-12 ")}");    // [PAR-12] Calvario
+Console.WriteLine($"  Buscar PAR-99: {hash.Buscar("PAR-99")?.ToString() ?? "null"}"); // null
+Console.WriteLine($"  ¿Contiene PAR-21? {hash.Contiene("PAR-21")}");     // True
+Console.WriteLine($"  ¿Contiene PAR-99? {hash.Contiene("PAR-99")}");     // False
+Console.WriteLine($"  ¿Insertó PAR-01 duplicado? {hash.Insertar(new Parada("PAR-01", "Otra", 0, 0))}"); // False
+Console.WriteLine($"  Cantidad final: {hash.Cantidad}");                 // 5

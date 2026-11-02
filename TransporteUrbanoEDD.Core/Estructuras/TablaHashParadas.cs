@@ -52,7 +52,7 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         public int FuncionHash(string codigo)
         {
             // Normalizar igual que Parada, para que "par-01" y "PAR-01" caigan en el mismo bucket
-            string clave = codigo.Trim().ToUpperInvariant();
+            string clave = Normalizar(codigo);
 
             int h = 0;
             foreach (char c in clave)
@@ -64,6 +64,68 @@ namespace TransporteUrbanoEDD.Core.Estructuras
 
             return h; // Siempre queda entre 0 y Capacidad - 1
         }
+
+        // ---------------------------------------------------------
+        // INSERTAR
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Inserta una parada en el bucket que le corresponde. O(1) promedio.
+        /// Devuelve false si ya existe una parada con el mismo código (no admite duplicados).
+        /// </summary>
+        public bool Insertar(Parada parada)
+        {
+            if (parada == null)
+                throw new ArgumentNullException(nameof(parada));
+
+            // El código es clave única: no se permiten dos paradas con el mismo
+            if (Contiene(parada.Codigo))
+                return false;
+
+            InsertarEnBucket(parada);
+            return true;
+        }
+
+        // Coloca la parada en su bucket sin validar duplicados.
+        // Separado de Insertar para reutilizarlo en el rehashing.
+        private void InsertarEnBucket(Parada parada)
+        {
+            int indice = FuncionHash(parada.Codigo); // 1. Calcular el bucket
+            buckets[indice].Agregar(parada);         // 2. Agregar a la cadena (si hay colisión, se encadena)
+            Cantidad++;
+        }
+
+        // ---------------------------------------------------------
+        // BUSCAR
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Devuelve la parada con ese código, o null si no existe. O(1) promedio:
+        /// solo recorre la cadena de un bucket, no toda la tabla.
+        /// </summary>
+        public Parada? Buscar(string codigo)
+        {
+            if (string.IsNullOrWhiteSpace(codigo))
+                return null;
+
+            string clave = Normalizar(codigo);
+            int indice = FuncionHash(clave); // 1. Ir directo al bucket
+
+            // 2. Recorrer solo esa cadena comparando códigos
+            foreach (Parada parada in buckets[indice])
+            {
+                if (parada.Codigo == clave)
+                    return parada; // Encontrada
+            }
+
+            return null; // No está en su bucket, entonces no existe
+        }
+
+        /// <summary>
+        /// Indica si existe una parada con ese código. O(1) promedio.
+        /// </summary>
+        public bool Contiene(string codigo)
+            => Buscar(codigo) != null;
 
         // ---------------------------------------------------------
         // AUXILIARES
@@ -78,5 +140,9 @@ namespace TransporteUrbanoEDD.Core.Estructuras
                 nuevos[i] = new ListaPropia<Parada>();
             return nuevos;
         }
+
+        // Normaliza el código igual que Parada: sin espacios y en mayúsculas
+        private static string Normalizar(string codigo)
+            => codigo.Trim().ToUpperInvariant();
     }
 }
