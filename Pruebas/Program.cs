@@ -354,3 +354,57 @@ Console.WriteLine($"  Ruta PAR-01 -> PAR-01: {cargadorR.RegistrarRuta("PAR-01", 
 Console.WriteLine($"  Hash: {hashR.Cantidad} | Grafo: {grafoR.CantidadParadas} | UF: {ufR.Cantidad} | Zonas: {ufR.CantidadZonas}"); // 3 | 3 | 3 | 2
 Console.WriteLine($"  ¿PAR-01 y PAR-02 misma zona? {ufR.EstanEnMismaZona("PAR-01", "PAR-02")}");  // True
 Console.WriteLine($"  ¿PAR-01 y PAR-03 misma zona? {ufR.EstanEnMismaZona("PAR-01", "PAR-03")}");  // False
+
+// -------------------------------------------------------------
+// PRUEBAS DE CARGA CSV (Dev 1) - Bloque 3: dataset completo
+// -------------------------------------------------------------
+Console.WriteLine("\n>>> PRUEBAS DE CARGA DESDE CSV (dataset de 20 paradas y 35 rutas)");
+TablaHashParadas hashC = new TablaHashParadas();
+GrafoTransporte grafoC = new GrafoTransporte();
+UnionFindZonas ufC = new UnionFindZonas(16, hashC);
+TrieParadas trieC = new TrieParadas();
+CargadorCSV cargador = new CargadorCSV(hashC, grafoC, ufC, trieC);
+
+// AppContext.BaseDirectory = carpeta donde está el .dll (bin/Debug/net10.0/)
+string carpetaDatos = Path.Combine(AppContext.BaseDirectory, "Datos");
+ResultadoCarga rp = cargador.CargarParadasCSV(Path.Combine(carpetaDatos, "paradas.csv"));
+ResultadoCarga rr = cargador.CargarRutasCSV(Path.Combine(carpetaDatos, "rutas.csv"));
+Console.WriteLine($"  Paradas: {rp}");   // 20 cargados, 0 con error
+Console.WriteLine($"  Rutas:   {rr}");   // 35 cargados, 0 con error
+Console.WriteLine($"  Hash: {hashC.Cantidad} | Grafo: {grafoC.CantidadParadas} | Zonas: {ufC.CantidadZonas}"); // 20 | 20 | 2
+Console.WriteLine($"  Factor de carga: {hashC.FactorCarga:F2} | Rehashes: {hashC.Rehashes}");
+
+// Flujo completo: Trie → Hash → Union-Find → Dijkstra
+Console.Write("  Autocompletar 'pa': ");
+foreach (string s in trieC.Autocompletar("pa")) Console.Write(s + " | ");
+Console.WriteLine(); // Parque Central (PAR-01) | Parque Benito Juarez (PAR-07)
+
+Console.WriteLine($"  ¿PAR-01 y PAR-17 misma zona? {ufC.EstanEnMismaZona("PAR-01", "PAR-17")}"); // True
+Console.WriteLine($"  ¿PAR-01 y PAR-20 misma zona? {ufC.EstanEnMismaZona("PAR-01", "PAR-20")}"); // False (zona aislada)
+
+ResultadoRuta rt = grafoC.CalcularDijkstra("PAR-01", "PAR-16", true);
+Console.WriteLine($"  Dijkstra PAR-01 -> PAR-16 (tiempo): {rt.ResumenCamino} | {rt.TiempoTotalMinutos:F1} min");
+// PAR-01 -> PAR-02 -> PAR-12 -> PAR-14 -> PAR-16 | 29.1 min
+ResultadoRuta rc = grafoC.CalcularDijkstra("PAR-01", "PAR-16", false);
+Console.WriteLine($"  Dijkstra PAR-01 -> PAR-16 (costo):  {rc.ResumenCamino} | Q{rc.CostoTotal:F2}");
+// PAR-01 -> PAR-09 -> PAR-11 -> PAR-15 -> PAR-16 | Q8.81
+
+// --- Manejo de errores ---
+Console.WriteLine("\n  Manejo de errores:");
+Console.WriteLine($"  Archivo inexistente: {cargador.CargarParadasCSV("no_existe.csv")}");
+
+string archivoMalo = Path.Combine(Path.GetTempPath(), "paradas_malas.csv");
+File.WriteAllLines(archivoMalo, new[]
+{
+    "Codigo,Nombre,X,Y,Zona",
+    "PAR-50,Parada buena,10,20,Zona 1",  // OK
+    "PAR-51,Sin coordenadas",             // Faltan campos
+    "PAR-52,Coordenada mala,abc,20",      // X no es número
+    ",Sin codigo,10,20",                  // Código vacío
+    "PAR-01,Duplicada,10,20",             // Ya existe del dataset
+    "",                                   // Vacía: se ignora
+    "# comentario: se ignora",
+});
+ResultadoCarga rm = cargador.CargarParadasCSV(archivoMalo);
+Console.WriteLine($"  Archivo con errores: {rm}"); // 1 cargados, 4 con error
+foreach (string e in rm.Errores) Console.WriteLine($"    - {e}");

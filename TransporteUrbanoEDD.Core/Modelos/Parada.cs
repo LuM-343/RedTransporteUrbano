@@ -30,7 +30,7 @@ namespace TransporteUrbanoEDD.Core.Modelos
         {
             // El código es obligatorio porque es la clave de búsqueda
             if (string.IsNullOrWhiteSpace(codigo))
-                throw new ArgumentException("El código de la parada no puede estar vacío.", nameof(codigo));
+                throw new ArgumentException("El código de la parada no puede estar vacío.");
 
             // Normalizar: sin espacios y en mayúsculas (" par-01" -> "PAR-01")
             Codigo = codigo.Trim().ToUpperInvariant();

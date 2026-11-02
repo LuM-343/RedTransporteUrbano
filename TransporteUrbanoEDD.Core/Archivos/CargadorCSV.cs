@@ -6,6 +6,8 @@
 
 using TransporteUrbanoEDD.Core.Estructuras;
 using TransporteUrbanoEDD.Core.Modelos;
+using System.Globalization; // CultureInfo para leer decimales con punto
+using System.Text;          // Encoding.UTF8 para leer tildes y ñ
 
 namespace TransporteUrbanoEDD.Core.Archivos
 {
@@ -110,6 +112,174 @@ namespace TransporteUrbanoEDD.Core.Archivos
             unionFind.Union(origen.Indice, destino.Indice);
 
             return null; // Éxito
+        }
+
+        // ---------------------------------------------------------
+        // CARGA DESDE ARCHIVOS CSV
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Carga paradas desde un CSV con formato: Codigo,Nombre,X,Y,Zona (Zona opcional).
+        /// Las líneas con error se reportan y se omiten; las demás sí se cargan.
+        /// </summary>
+        public ResultadoCarga CargarParadasCSV(string rutaArchivo)
+        {
+            ResultadoCarga resultado = new ResultadoCarga();
+            string[]? lineas = LeerArchivo(rutaArchivo, resultado);
+            if (lineas == null)
+                return resultado; // No se pudo abrir: el motivo ya está en Errores
+
+            for (int i = 0; i < lineas.Length; i++)
+            {
+                int numLinea = i + 1;           // Para el usuario las líneas empiezan en 1
+                string linea = lineas[i].Trim();
+
+                if (EsLineaIgnorable(linea, i, "Codigo"))
+                    continue;
+
+                string[] campos = linea.Split(',');
+                if (campos.Length < 4)
+                {
+                    resultado.Errores.Agregar($"Línea {numLinea}: se esperaban al menos 4 campos (Codigo,Nombre,X,Y)");
+                    continue;
+                }
+
+                if (!LeerNumero(campos[2], out double x) || !LeerNumero(campos[3], out double y))
+                {
+                    resultado.Errores.Agregar($"Línea {numLinea}: coordenadas inválidas ('{campos[2]}', '{campos[3]}')");
+                    continue;
+                }
+
+                string zona = campos.Length >= 5 ? campos[4] : ""; // La zona es opcional
+
+                Parada parada;
+                try
+                {
+                    parada = new Parada(campos[0], campos[1], x, y, zona);
+                }
+                catch (ArgumentException ex) // Código vacío
+                {
+                    resultado.Errores.Agregar($"Línea {numLinea}: {ex.Message}");
+                    continue;
+                }
+
+                string? error = RegistrarParada(parada);
+                if (error == null)
+                    resultado.Cargados++;
+                else
+                    resultado.Errores.Agregar($"Línea {numLinea}: {error}");
+            }
+
+            return resultado;
+        }
+
+        /// <summary>
+        /// Carga rutas desde un CSV con formato: Origen,Destino,Tiempo,Costo,Bidireccional.
+        /// Las paradas deben haberse cargado antes. Bidireccional acepta true/false, 1/0, si/no.
+        /// </summary>
+        public ResultadoCarga CargarRutasCSV(string rutaArchivo)
+        {
+            ResultadoCarga resultado = new ResultadoCarga();
+            string[]? lineas = LeerArchivo(rutaArchivo, resultado);
+            if (lineas == null)
+                return resultado;
+
+            for (int i = 0; i < lineas.Length; i++)
+            {
+                int numLinea = i + 1;
+                string linea = lineas[i].Trim();
+
+                if (EsLineaIgnorable(linea, i, "Origen"))
+                    continue;
+
+                string[] campos = linea.Split(',');
+                if (campos.Length < 5)
+                {
+                    resultado.Errores.Agregar($"Línea {numLinea}: se esperaban 5 campos (Origen,Destino,Tiempo,Costo,Bidireccional)");
+                    continue;
+                }
+
+                if (!LeerNumero(campos[2], out double tiempo) || !LeerNumero(campos[3], out double costo))
+                {
+                    resultado.Errores.Agregar($"Línea {numLinea}: tiempo o costo inválido ('{campos[2]}', '{campos[3]}')");
+                    continue;
+                }
+
+                if (!LeerBooleano(campos[4], out bool bidireccional))
+                {
+                    resultado.Errores.Agregar($"Línea {numLinea}: valor de Bidireccional inválido ('{campos[4]}')");
+                    continue;
+                }
+
+                string? error = RegistrarRuta(campos[0], campos[1], tiempo, costo, bidireccional);
+                if (error == null)
+                    resultado.Cargados++;
+                else
+                    resultado.Errores.Agregar($"Línea {numLinea}: {error}");
+            }
+
+            return resultado;
+        }
+
+        // ---------------------------------------------------------
+        // AUXILIARES DE LECTURA
+        // ---------------------------------------------------------
+
+        // Valida el archivo y devuelve sus líneas, o null si no se puede usar (y anota el motivo)
+        private static string[]? LeerArchivo(string rutaArchivo, ResultadoCarga resultado)
+        {
+            string? motivo = null;
+
+            if (string.IsNullOrWhiteSpace(rutaArchivo))
+                motivo = "No se indicó la ruta del archivo";
+            else if (!File.Exists(rutaArchivo))
+                motivo = $"El archivo '{rutaArchivo}' no existe";
+            else if (!rutaArchivo.EndsWith(".csv", StringComparison.OrdinalIgnoreCase) &&
+                     !rutaArchivo.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                motivo = "El archivo debe ser .csv o .txt";
+
+            if (motivo == null)
+            {
+                try
+                {
+                    return File.ReadAllLines(rutaArchivo, Encoding.UTF8);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    motivo = $"No se pudo leer el archivo: {ex.Message}"; // En uso o sin permisos
+                }
+            }
+
+            resultado.ArchivoValido = false;
+            resultado.Errores.Agregar(motivo);
+            return null;
+        }
+
+        // Líneas que no son datos: vacías, comentarios (#) o el encabezado en la primera línea
+        private static bool EsLineaIgnorable(string linea, int indice, string primerCampoEncabezado)
+            => linea.Length == 0
+               || linea.StartsWith("#")
+               || (indice == 0 && linea.StartsWith(primerCampoEncabezado, StringComparison.OrdinalIgnoreCase));
+
+        // Convierte texto a número usando punto decimal, sin depender del idioma de la computadora
+        private static bool LeerNumero(string texto, out double valor)
+            => double.TryParse(texto.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out valor);
+
+        // Acepta true/false, 1/0, si/no (sin importar mayúsculas)
+        private static bool LeerBooleano(string texto, out bool valor)
+        {
+            switch (texto.Trim().ToLowerInvariant())
+            {
+                case "true": case "1": case "si": case "sí":
+                    valor = true;
+                    return true;
+                case "false": case "0": case "no":
+                    valor = false;
+                    return true;
+                default:
+                    valor = false;
+                    return false; // Texto no reconocido
+            }
         }
     }
 }
