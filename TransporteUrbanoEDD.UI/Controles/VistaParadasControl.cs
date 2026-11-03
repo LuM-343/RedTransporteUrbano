@@ -301,6 +301,21 @@ namespace TransporteUrbanoEDD.UI.Controles
             gridBuckets.Columns["cadena"]!.FillWeight = 70;
             gridBuckets.Columns["paradas"]!.FillWeight = 15;
 
+            // Estilo: encabezado oscuro, filas alternas y solo líneas horizontales
+            gridBuckets.EnableHeadersVisualStyles = false; // Permite usar colores propios en el encabezado
+            gridBuckets.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+            gridBuckets.ColumnHeadersHeight = 32;
+            gridBuckets.ColumnHeadersDefaultCellStyle.BackColor = ColorEncabezado;
+            gridBuckets.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            gridBuckets.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            gridBuckets.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+            gridBuckets.GridColor = Color.FromArgb(226, 232, 240);
+            gridBuckets.RowTemplate.Height = 28;
+            gridBuckets.AlternatingRowsDefaultCellStyle.BackColor = ColorFondo;
+            gridBuckets.DefaultCellStyle.SelectionBackColor = Color.FromArgb(191, 219, 254); // Azul claro
+            gridBuckets.DefaultCellStyle.SelectionForeColor = ColorTexto;
+            gridBuckets.ColumnHeadersDefaultCellStyle.SelectionBackColor = ColorEncabezado; // El encabezado no cambia al seleccionar
+
             lblEstadoTabla = new Label
             {
                 Dock = DockStyle.Top,
@@ -372,6 +387,8 @@ namespace TransporteUrbanoEDD.UI.Controles
                     bucketsConColision++;
                 }
             }
+
+            gridBuckets.ClearSelection(); // Que no aparezca la primera fila seleccionada al abrir
 
             lblEstadoTabla.Text = $"Capacidad: {tablaHash.Capacidad}   |   Paradas: {tablaHash.Cantidad}   |   " +
                                   $"Factor de carga: {tablaHash.FactorCarga:F2}   |   Rehashes: {tablaHash.Rehashes}   |   " +
@@ -529,6 +546,10 @@ namespace TransporteUrbanoEDD.UI.Controles
                 cboZonaOrigen.Items.Add(p);
                 cboZonaDestino.Items.Add(p);
             }
+
+            // Dejar elegidas la primera y la segunda parada para que no se vean vacíos
+            if (cboZonaOrigen.Items.Count > 0) cboZonaOrigen.SelectedIndex = 0;
+            if (cboZonaDestino.Items.Count > 1) cboZonaDestino.SelectedIndex = 1;
 
             lblCantidadZonas.Text = $"Zonas desconectadas en la red: {unionFind.CantidadZonas}";
         }

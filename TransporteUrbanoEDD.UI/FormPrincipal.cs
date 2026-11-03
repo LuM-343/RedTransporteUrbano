@@ -17,11 +17,14 @@ namespace TransporteUrbanoEDD.UI
         private VistaBuscadorControl vistaBuscador = null!; // Pestaña 2
         private VistaRutasGrafoControl vistaRutas = null!; // Pestaña 3 (I3)
 
+        private ToolStripStatusLabel lblEstado = null!; // Texto de la barra inferior
+
         public FormPrincipal()
         {
             ConfigurarVentana();
             CargarDatasetInicial();
             ConstruirPestanas();
+            CrearBarraEstado();   // Después de las pestañas para que quede abajof
             ConectarPestanas();
         }
 
@@ -80,6 +83,23 @@ namespace TransporteUrbanoEDD.UI
             Controls.Add(pestanas);
         }
 
+        // Barra inferior con el estado general del sistema
+        private void CrearBarraEstado()
+        {
+            StatusStrip barra = new StatusStrip { BackColor = Color.FromArgb(30, 41, 59), SizingGrip = false };
+            lblEstado = new ToolStripStatusLabel { ForeColor = Color.White, Font = new Font("Segoe UI", 9F) };
+            barra.Items.Add(lblEstado);
+            Controls.Add(barra);
+        }
+
+        private void ActualizarBarraEstado()
+        {
+            lblEstado.Text = $"Paradas: {orquestador.TablaHash.Cantidad}     |     " +
+                             $"Zonas desconectadas: {orquestador.UnionFind.CantidadZonas}     |     " +
+                             $"Factor de carga: {orquestador.TablaHash.FactorCarga:F2}     |     " +
+                             $"Aristas en el grafo: {orquestador.Grafo.ObtenerTodasLasRutas().Count}";
+        }
+
         // Todas las pestañas reciben las MISMAS estructuras del orquestador
         private void ConectarPestanas()
         {
@@ -92,7 +112,10 @@ namespace TransporteUrbanoEDD.UI
             {
                 vistaBuscador.Refrescar();
                 vistaRutas.ConectarDatos(orquestador.Grafo);
+                ActualizarBarraEstado();
             };
+
+            ActualizarBarraEstado();
         }
     }
 }
