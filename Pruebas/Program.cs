@@ -490,3 +490,12 @@ ResultadoRuta r2 = orq.BuscarRutaOptima("PAR-01", "PAR-20", true);
 Console.WriteLine($"  PAR-01 -> PAR-20: {r2.MensajeEstado}");   // zonas no conectadas (Union-Find)
 ResultadoRuta r3 = orq.BuscarRutaOptima("PAR-01", "PAR-99", true);
 Console.WriteLine($"  PAR-01 -> PAR-99: {r3.MensajeEstado}");   // no existe (Tabla Hash)
+
+// Probar baja coordinada de parada a través del Orquestador (Hash + Grafo + UnionFind)
+Console.WriteLine("\n  Probando EliminarParada en el Orquestador ('PAR-02'):");
+string? errElim = orq.EliminarParada("PAR-02");
+Console.WriteLine($"  Resultado eliminación PAR-02: {errElim ?? "OK (eliminada de Hash, Grafo y UF reconstruido)"}");
+Console.WriteLine($"  ¿Tabla Hash contiene PAR-02?: {orq.TablaHash.Contiene("PAR-02")}");
+Console.WriteLine($"  ¿Grafo contiene PAR-02?: {orq.Grafo.ExisteParada("PAR-02")}");
+ResultadoRuta rPostElim = orq.BuscarRutaOptima("PAR-01", "PAR-16", true);
+Console.WriteLine($"  Ruta alternada PAR-01 -> PAR-16 post-eliminación PAR-02: {rPostElim.ResumenCamino} (Tiempo: {rPostElim.TiempoTotalMinutos:F1} min)");

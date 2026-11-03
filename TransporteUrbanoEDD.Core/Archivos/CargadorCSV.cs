@@ -123,9 +123,10 @@ namespace TransporteUrbanoEDD.Core.Archivos
             if (!tablaHash.Eliminar(codigo))
                 return $"La parada '{codigo}' no existe";
 
-            // PENDIENTE cuando el grafo tenga EliminarParada (Integrante 3):
-            //   grafo.EliminarParada(codigo);
-            //   unionFind.Reconstruir(grafo.CantidadParadas, grafo.ObtenerTodasLasRutas());
+            // Baja del vértice y purga de aristas en el grafo (Integrante 3)
+            grafo.EliminarParada(codigo);
+            // Reconstrucción del Union-Find para mantener zonas actualizadas
+            unionFind.Reconstruir(grafo.CantidadParadas, grafo.ObtenerTodasLasRutas());
             // y cuando el Trie tenga Eliminar (Integrante 2):
             //   trie?.Eliminar(nombre);
 

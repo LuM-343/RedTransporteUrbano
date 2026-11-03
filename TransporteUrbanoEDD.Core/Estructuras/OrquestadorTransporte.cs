@@ -47,4 +47,12 @@ public class OrquestadorTransporte
         // 3. Ruta óptima: Dijkstra O((V + E) log V)
         return Grafo.CalcularDijkstra(codOrigen, codDestino, porTiempo);
     }
+
+    /// <summary>
+    /// Elimina una parada coordinando la baja en la Tabla Hash, el Grafo y reconstruyendo el Union-Find.
+    /// </summary>
+    public string? EliminarParada(string codigo)
+    {
+        return Cargador.EliminarParada(codigo);
+    }
 }
