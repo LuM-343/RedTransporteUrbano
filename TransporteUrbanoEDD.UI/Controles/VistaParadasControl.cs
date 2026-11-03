@@ -30,6 +30,17 @@ namespace TransporteUrbanoEDD.UI.Controles
         // Panel izquierdo: secciones apiladas de arriba hacia abajo
         private FlowLayoutPanel panelLateral = null!;
 
+        // Sección CRUD
+        private TextBox txtCodigo = null!;
+        private TextBox txtNombre = null!;
+        private TextBox txtZona = null!;
+        private NumericUpDown numX = null!;
+        private NumericUpDown numY = null!;
+        private Label lblMensajeCrud = null!;
+
+        /// <summary>Se dispara al agregar, eliminar o cargar paradas, para que otras pestañas se refresquen.</summary>
+        public event EventHandler? DatosModificados;
+
         // Panel derecho: estado de la Tabla Hash
         private Label lblEstadoTabla = null!;
         private DataGridView gridBuckets = null!;
@@ -61,6 +72,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 BackColor = ColorFondo
             };
             panelLateral.Controls.Add(CrearEncabezado());
+            panelLateral.Controls.Add(CrearSeccionCrud());
 
             // Orden importante: primero el que llena (Fill), después el acoplado a la izquierda
             Controls.Add(CrearPanelBuckets());
@@ -92,6 +104,84 @@ namespace TransporteUrbanoEDD.UI.Controles
             });
 
             return encabezado;
+        }
+
+        // Sección 1: campos de la parada y botones Agregar / Buscar / Eliminar / Limpiar
+        private GroupBox CrearSeccionCrud()
+        {
+            GroupBox gb = CrearSeccion(" 1. Paradas (Agregar / Buscar / Eliminar) ", 250);
+
+            txtCodigo = new TextBox { Location = new Point(80, 28), Width = 120, PlaceholderText = "PAR-21" };
+            txtNombre = new TextBox { Location = new Point(80, 60), Width = 264 };
+            numX = new NumericUpDown { Location = new Point(80, 92), Width = 90, Maximum = 2000, DecimalPlaces = 1 };
+            numY = new NumericUpDown { Location = new Point(215, 92), Width = 90, Maximum = 2000, DecimalPlaces = 1 };
+            txtZona = new TextBox { Location = new Point(80, 124), Width = 264, PlaceholderText = "Zona 1" };
+
+            Button btnAgregar = CrearBoton("Agregar", Color.FromArgb(22, 163, 74), 12, 160);
+            Button btnBuscar = CrearBoton("Buscar", Color.FromArgb(37, 99, 235), 98, 160);
+            Button btnEliminar = CrearBoton("Eliminar", Color.FromArgb(220, 38, 38), 184, 160);
+            Button btnLimpiar = CrearBoton("Limpiar", Color.FromArgb(100, 116, 139), 270, 160);
+            btnAgregar.Click += BtnAgregar_Click;
+            btnBuscar.Click += BtnBuscar_Click;
+            btnEliminar.Click += BtnEliminar_Click;
+            btnLimpiar.Click += (s, e) => LimpiarCampos();
+
+            lblMensajeCrud = new Label { Location = new Point(12, 202), Size = new Size(336, 40), Font = new Font("Segoe UI", 8.5F) };
+
+            gb.Controls.AddRange(new Control[]
+            {
+                CrearEtiqueta("Código:", 12, 28), txtCodigo,
+                CrearEtiqueta("Nombre:", 12, 60), txtNombre,
+                CrearEtiqueta("X:", 12, 92), numX,
+                CrearEtiqueta("Y:", 190, 92), numY,
+                CrearEtiqueta("Zona:", 12, 124), txtZona,
+                btnAgregar, btnBuscar, btnEliminar, btnLimpiar,
+                lblMensajeCrud
+            });
+            return gb;
+        }
+
+        // ---------------------------------------------------------
+        // AUXILIARES VISUALES (se reutilizan en todas las secciones)
+        // ---------------------------------------------------------
+
+        // Recuadro con título para cada sección del panel izquierdo
+        private GroupBox CrearSeccion(string titulo, int alto) => new GroupBox
+        {
+            Text = titulo,
+            Width = 360,
+            Height = alto,
+            Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+            ForeColor = ColorTexto,
+            Margin = new Padding(0, 12, 0, 0) // Espacio entre secciones
+        };
+
+        private static Label CrearEtiqueta(string texto, int x, int y) => new Label
+        {
+            Text = texto,
+            Location = new Point(x, y + 3), // +3 para alinearla con el TextBox
+            AutoSize = true,
+            Font = new Font("Segoe UI", 8.5F)
+        };
+
+        private static Button CrearBoton(string texto, Color color, int x, int y, int ancho = 78) => new Button
+        {
+            Text = texto,
+            Location = new Point(x, y),
+            Size = new Size(ancho, 32),
+            BackColor = color,
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
+            FlatAppearance = { BorderSize = 0 }, // Sin borde, estilo plano
+            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+            Cursor = Cursors.Hand
+        };
+
+        // Muestra un mensaje en verde (éxito) o rojo (error)
+        private static void MostrarMensaje(Label etiqueta, string texto, bool exito)
+        {
+            etiqueta.Text = texto;
+            etiqueta.ForeColor = exito ? Color.FromArgb(22, 163, 74) : Color.FromArgb(220, 38, 38);
         }
 
         // Lado derecho: título, resumen de la tabla y la grilla de buckets
@@ -193,6 +283,116 @@ namespace TransporteUrbanoEDD.UI.Controles
             lblEstadoTabla.Text = $"Capacidad: {tablaHash.Capacidad}   |   Paradas: {tablaHash.Cantidad}   |   " +
                                   $"Factor de carga: {tablaHash.FactorCarga:F2}   |   Rehashes: {tablaHash.Rehashes}   |   " +
                                   $"Buckets con colisión: {bucketsConColision}";
+        }
+
+        // ---------------------------------------------------------
+        // EVENTOS DEL CRUD
+        // ---------------------------------------------------------
+
+        private void BtnAgregar_Click(object? sender, EventArgs e)
+        {
+            if (cargador == null || tablaHash == null)
+                return;
+
+            if (string.IsNullOrWhiteSpace(txtCodigo.Text) || string.IsNullOrWhiteSpace(txtNombre.Text))
+            {
+                MostrarMensaje(lblMensajeCrud, "El código y el nombre son obligatorios.", false);
+                return;
+            }
+
+            Parada parada = new Parada(txtCodigo.Text, txtNombre.Text,
+                                       (double)numX.Value, (double)numY.Value, txtZona.Text);
+
+            // Registra en Tabla Hash, Grafo, Union-Find y Trie a la vez
+            string? error = cargador.RegistrarParada(parada);
+            if (error != null)
+            {
+                MostrarMensaje(lblMensajeCrud, error, false);
+                return;
+            }
+
+            int bucket = tablaHash.FuncionHash(parada.Codigo); // Después de insertar (por si hubo rehashing)
+            ActualizarVistaBuckets();
+            SeleccionarBucket(bucket);
+            MostrarMensaje(lblMensajeCrud, $"{parada.Codigo} agregada en el bucket {bucket}.", true);
+            LimpiarCampos(conservarMensaje: true);
+            DatosModificados?.Invoke(this, EventArgs.Empty); // Avisar a las otras pestañas
+        }
+
+        private void BtnBuscar_Click(object? sender, EventArgs e)
+        {
+            if (tablaHash == null)
+                return;
+
+            Parada? parada = tablaHash.Buscar(txtCodigo.Text); // O(1) promedio
+            if (parada == null)
+            {
+                MostrarMensaje(lblMensajeCrud, $"No existe la parada '{txtCodigo.Text.Trim()}'.", false);
+                return;
+            }
+
+            // Mostrar sus datos en los campos
+            txtCodigo.Text = parada.Codigo;
+            txtNombre.Text = parada.Nombre;
+            numX.Value = (decimal)Math.Min(parada.X, (double)numX.Maximum);
+            numY.Value = (decimal)Math.Min(parada.Y, (double)numY.Maximum);
+            txtZona.Text = parada.Zona;
+
+            int bucket = tablaHash.FuncionHash(parada.Codigo);
+            SeleccionarBucket(bucket);
+            MostrarMensaje(lblMensajeCrud, $"Encontrada en el bucket {bucket}.", true);
+        }
+
+        private void BtnEliminar_Click(object? sender, EventArgs e)
+        {
+            if (cargador == null)
+                return;
+
+            string codigo = txtCodigo.Text.Trim().ToUpperInvariant();
+            if (codigo.Length == 0)
+            {
+                MostrarMensaje(lblMensajeCrud, "Escribe el código de la parada a eliminar.", false);
+                return;
+            }
+
+            DialogResult respuesta = MessageBox.Show($"¿Eliminar la parada {codigo}?", "Confirmar",
+                                                     MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (respuesta != DialogResult.Yes)
+                return;
+
+            string? error = cargador.EliminarParada(codigo);
+            if (error != null)
+            {
+                MostrarMensaje(lblMensajeCrud, error, false);
+                return;
+            }
+
+            ActualizarVistaBuckets();
+            MostrarMensaje(lblMensajeCrud, $"{codigo} eliminada.", true);
+            LimpiarCampos(conservarMensaje: true);
+            DatosModificados?.Invoke(this, EventArgs.Empty);
+        }
+
+        // Selecciona la fila del bucket y desplaza la tabla hasta ella
+        private void SeleccionarBucket(int indice)
+        {
+            if (indice < 0 || indice >= gridBuckets.Rows.Count)
+                return;
+
+            gridBuckets.ClearSelection();
+            gridBuckets.Rows[indice].Selected = true;
+            gridBuckets.FirstDisplayedScrollingRowIndex = indice;
+        }
+
+        private void LimpiarCampos(bool conservarMensaje = false)
+        {
+            txtCodigo.Clear();
+            txtNombre.Clear();
+            txtZona.Clear();
+            numX.Value = 0;
+            numY.Value = 0;
+            if (!conservarMensaje)
+                lblMensajeCrud.Text = "";
         }
     }
 }

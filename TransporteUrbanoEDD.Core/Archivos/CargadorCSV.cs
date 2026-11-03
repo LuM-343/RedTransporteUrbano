@@ -114,6 +114,24 @@ namespace TransporteUrbanoEDD.Core.Archivos
             return null; // Éxito
         }
 
+        /// <summary>
+        /// Elimina una parada. Por ahora solo de la Tabla Hash: el Orquestador ya la trata como inexistente.
+        /// Devuelve null si tuvo éxito, o el mensaje de error.
+        /// </summary>
+        public string? EliminarParada(string codigo)
+        {
+            if (!tablaHash.Eliminar(codigo))
+                return $"La parada '{codigo}' no existe";
+
+            // PENDIENTE cuando el grafo tenga EliminarParada (Integrante 3):
+            //   grafo.EliminarParada(codigo);
+            //   unionFind.Reconstruir(grafo.CantidadParadas, grafo.ObtenerTodasLasRutas());
+            // y cuando el Trie tenga Eliminar (Integrante 2):
+            //   trie?.Eliminar(nombre);
+
+            return null; // Éxito
+        }
+
         // ---------------------------------------------------------
         // CARGA DESDE ARCHIVOS CSV
         // ---------------------------------------------------------
