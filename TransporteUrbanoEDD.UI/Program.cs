@@ -10,10 +10,14 @@ static class Program
     {
         ApplicationConfiguration.Initialize();
 
-        // "dotnet run -- dev1" abre la prueba de la Pestaña 1; sin argumento, la de Dev 3
-        if (args.Length > 0 && args[0] == "dev1")
+        // Sin argumento: programa completo. "dev1" / "dev3": ventanas de prueba de cada pestaña
+        string modo = args.Length > 0 ? args[0] : "";
+
+        if (modo == "dev1")
             Application.Run(new FormPruebaDev1());
-        else
+        else if (modo == "dev3")
             Application.Run(new FormPruebaDev3());
-    }    
+        else
+            Application.Run(new FormPrincipal());
+    }
 }
