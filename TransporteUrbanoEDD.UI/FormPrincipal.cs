@@ -14,6 +14,7 @@ namespace TransporteUrbanoEDD.UI
         private readonly OrquestadorTransporte orquestador = new OrquestadorTransporte();
 
         private VistaParadasControl vistaParadas = null!; // Pestaña 1 (I1)
+        private VistaBuscadorControl vistaBuscador = null!; // Pestaña 2
         private VistaRutasGrafoControl vistaRutas = null!; // Pestaña 3 (I3)
 
         public FormPrincipal()
@@ -63,15 +64,10 @@ namespace TransporteUrbanoEDD.UI
             TabPage tab1 = new TabPage("1. Paradas y Zonas");
             tab1.Controls.Add(vistaParadas);
 
-            // Pestaña 2: buscador con autocompletado (se completa en el siguiente bloque)
+            // Pestaña 2: buscador con autocompletado y ruta por nombre
+            vistaBuscador = new VistaBuscadorControl { Dock = DockStyle.Fill };
             TabPage tab2 = new TabPage("2. Buscador");
-            tab2.Controls.Add(new Label
-            {
-                Text = "Buscador con autocompletado (Trie): en construcción.",
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = Color.FromArgb(100, 116, 139)
-            });
+            tab2.Controls.Add(vistaBuscador);
 
             // Pestaña 3: rutas, recorridos y mapa (I3)
             vistaRutas = new VistaRutasGrafoControl { Dock = DockStyle.Fill };
@@ -88,10 +84,15 @@ namespace TransporteUrbanoEDD.UI
         private void ConectarPestanas()
         {
             vistaParadas.ConectarDatos(orquestador.TablaHash, orquestador.UnionFind, orquestador.Cargador);
+            vistaBuscador.ConectarDatos(orquestador);
             vistaRutas.ConectarDatos(orquestador.Grafo);
 
-            // Si cambian las paradas en la Pestaña 1, el mapa de la Pestaña 3 se vuelve a dibujar
-            vistaParadas.DatosModificados += (s, e) => vistaRutas.ConectarDatos(orquestador.Grafo);
+            // Si cambian las paradas en la Pestaña 1, se refrescan el buscador y el mapa
+            vistaParadas.DatosModificados += (s, e) =>
+            {
+                vistaBuscador.Refrescar();
+                vistaRutas.ConectarDatos(orquestador.Grafo);
+            };
         }
     }
 }
