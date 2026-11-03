@@ -95,7 +95,7 @@ grafo.AgregarParada(p5);
 grafo.AgregarParada(p6);
 grafo.AgregarParada(p7);
 
-Console.WriteLine($"Paradas registradas: {grafo.CantidadParadas}");
+Console.WriteLine($"Paradas registradas: {grafo.CantidadParadas} (Activas: {grafo.CantidadParadasActivas})");
 
 // Registrar Rutas con doble peso (Tiempo en min, Costo en Q)
 // Vía A: PAR-01 <-> PAR-02 (12m, Q2.50) y PAR-02 <-> PAR-03 (15m, Q3.00) => Total: 27 min, Q5.50 (Más barata)
@@ -198,6 +198,72 @@ Console.WriteLine("\n[Caso 7] Código de parada inexistente (PAR-99 -> PAR-01):"
 ResultadoRuta rutaInvalida = grafo.CalcularDijkstra("PAR-99", "PAR-01", optimizarPorTiempo: true);
 Console.WriteLine($"  ¿Existe ruta?: {rutaInvalida.ExisteRuta}");
 Console.WriteLine($"  Mensaje: {rutaInvalida.MensajeEstado}");
+
+// -------------------------------------------------------------
+// 6. PRUEBAS DE ELIMINACIÓN DE RUTAS Y PARADAS (Dev 3 - Baja de Vértice)
+// -------------------------------------------------------------
+Console.WriteLine("\n>>> 6. PRUEBAS DE ELIMINACIÓN DE RUTAS Y PARADAS (Baja de Vértice + Purga)");
+
+// 6.1 Eliminación de Ruta específica PAR-01 <---> PAR-02 (Doble vía)
+Console.WriteLine("\n[Subcaso 6.1] Eliminación de Ruta específica PAR-01 <---> PAR-02 (Doble vía):");
+Console.WriteLine($"  ¿Existe conexión antes?: {grafo.ExisteRuta("PAR-01", "PAR-02")}");
+bool elimRuta = grafo.EliminarRuta("PAR-01", "PAR-02", esDobleVia: true);
+Console.WriteLine($"  ¿Ruta eliminada con éxito?: {elimRuta}");
+Console.WriteLine($"  ¿Existe conexión PAR-01 -> PAR-02 después?: {grafo.ExisteRuta("PAR-01", "PAR-02")}");
+Console.WriteLine($"  ¿Existe conexión PAR-02 -> PAR-01 después?: {grafo.ExisteRuta("PAR-02", "PAR-01")}");
+
+// Restaurar ruta para continuar con pruebas de paradas
+grafo.AgregarRuta("PAR-01", "PAR-02", tiempo: 12.0, costo: 2.50, esBidireccional: true);
+
+// 6.2 Eliminación de Parada (EliminarParada) - Probar con PAR-04 (Paso intermedio de la ruta más rápida PAR-01 -> PAR-04 -> PAR-05 -> PAR-03)
+Console.WriteLine("\n[Subcaso 6.2] Eliminación de Parada intermedia 'PAR-04' (Centro Cívico):");
+Console.WriteLine($"  Total paradas antes: {grafo.CantidadParadas} (Activas: {grafo.CantidadParadasActivas})");
+Console.WriteLine($"  ¿Existe PAR-04 antes?: {grafo.ExisteParada("PAR-04")}");
+
+bool elimParada = grafo.EliminarParada("PAR-04");
+Console.WriteLine($"  ¿Parada PAR-04 eliminada con éxito?: {elimParada}");
+Console.WriteLine($"  ¿Existe PAR-04 después?: {grafo.ExisteParada("PAR-04")}");
+Console.WriteLine($"  ObtenerIdVertice('PAR-04') retorna: {grafo.ObtenerIdVertice("PAR-04")}");
+Console.WriteLine($"  Total paradas después: {grafo.CantidadParadas} (Activas: {grafo.CantidadParadasActivas})");
+
+// Verificar que las aristas entrantes hacia PAR-04 en PAR-01 fueron purgadas
+bool tieneAristaHaciaP4 = false;
+foreach (AristaRuta r in grafo.ObtenerRutasSalientes("PAR-01"))
+{
+    if (r.Destino.Codigo == "PAR-04") tieneAristaHaciaP4 = true;
+}
+Console.WriteLine($"  ¿PAR-01 aún tiene arista saliente hacia PAR-04?: {tieneAristaHaciaP4} (Debe ser False)");
+
+// 6.3 Impacto en Dijkstra tras eliminar PAR-04:
+// Antes, la ruta más rápida a PAR-03 iba por PAR-04. Ahora debe recalcular y forzar ir por PAR-02
+Console.WriteLine("\n[Subcaso 6.3] Recálculo de Dijkstra PAR-01 -> PAR-03 tras dar de baja PAR-04:");
+ResultadoRuta rutaPostBaja = grafo.CalcularDijkstra("PAR-01", "PAR-03", optimizarPorTiempo: true);
+Console.WriteLine($"  ¿Existe ruta?: {rutaPostBaja.ExisteRuta}");
+Console.WriteLine($"  Nuevo camino alternativo: {rutaPostBaja.ResumenCamino}");
+Console.WriteLine($"  Tiempo total: {rutaPostBaja.TiempoTotalMinutos:F1} min (Ahora forzado por PAR-02)");
+
+// 6.4 Recorridos BFS y DFS tras dar de baja PAR-04
+Console.WriteLine("\n[Subcaso 6.4] Recorridos BFS y DFS tras baja (sin NullReferenceException):");
+ListaPropia<Parada> bfsPost = grafo.RecorridoBFS("PAR-01");
+Console.Write("  BFS post-baja: ");
+foreach (Parada p in bfsPost) Console.Write($"{p.Codigo} ");
+Console.WriteLine("FIN");
+
+ListaPropia<Parada> dfsPost = grafo.RecorridoDFS("PAR-01");
+Console.Write("  DFS post-baja: ");
+foreach (Parada p in dfsPost) Console.Write($"{p.Codigo} ");
+Console.WriteLine("FIN");
+
+// 6.5 Intentar calcular ruta hacia o desde parada dada de baja
+Console.WriteLine("\n[Subcaso 6.5] Dijkstra intentando llegar a la parada dada de baja (PAR-01 -> PAR-04):");
+ResultadoRuta rutaHaciaBaja = grafo.CalcularDijkstra("PAR-01", "PAR-04", optimizarPorTiempo: true);
+Console.WriteLine($"  ¿Existe ruta?: {rutaHaciaBaja.ExisteRuta}");
+Console.WriteLine($"  Mensaje: {rutaHaciaBaja.MensajeEstado}");
+
+// 6.6 Intentar eliminar parada inexistente o ya eliminada
+Console.WriteLine("\n[Subcaso 6.6] Intentar eliminar de nuevo PAR-04 o una inexistente:");
+Console.WriteLine($"  Re-eliminar PAR-04: {grafo.EliminarParada("PAR-04")} (Debe ser False)");
+Console.WriteLine($"  Eliminar PAR-99 inexistente: {grafo.EliminarParada("PAR-99")} (Debe ser False)");
 
 Console.WriteLine("\n==============================================================");
 Console.WriteLine("             TODAS LAS PRUEBAS FINALIZADAS CON ÉXITO");

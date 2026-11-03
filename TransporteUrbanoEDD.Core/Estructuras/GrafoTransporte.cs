@@ -8,16 +8,42 @@ namespace TransporteUrbanoEDD.Core.Estructuras
     /// Estructura de Grafo para la Red de Transporte Urbano.
     /// Implementado con listas de adyacencia utilizando la lista enlazada propia (ListaPropia<T>).
     /// Soporta aristas dirigidas y bidireccionales, doble ponderación (tiempo y costo),
-    /// y algoritmos de recorrido BFS y DFS.
+    /// algoritmos de recorrido BFS y DFS, y cálculo de rutas óptimas con Dijkstra.
+    /// Incorpora eliminación de paradas y rutas mediante la técnica de "Baja del Vértice + Purga Total de Aristas",
+    /// preservando estrictamente la estabilidad de los identificadores para sincronización con Union-Find.
     /// Desarrollado por Dev 3.
     /// </summary>
     public class GrafoTransporte
     {
-        private Parada[] vertices;
+        private Parada?[] vertices;
         private ListaPropia<AristaRuta>[] adyacencias;
         private int numVertices;
 
+        /// <summary>
+        /// Total de índices/posiciones reservadas en el grafo (0 .. CantidadParadas - 1).
+        /// Mantiene la sincronización de identificadores con estructuras como UnionFindZonas.
+        /// </summary>
         public int CantidadParadas => numVertices;
+
+        /// <summary>
+        /// Número de paradas actualmente activas en el grafo (excluyendo las dadas de baja).
+        /// </summary>
+        public int CantidadParadasActivas
+        {
+            get
+            {
+                int activas = 0;
+                for (int i = 0; i < numVertices; i++)
+                {
+                    if (vertices[i] != null)
+                    {
+                        activas++;
+                    }
+                }
+                return activas;
+            }
+        }
+
         public int Capacidad => vertices.Length;
 
         public GrafoTransporte(int capacidadInicial = 16)
@@ -25,7 +51,7 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             if (capacidadInicial < 1)
                 capacidadInicial = 16;
 
-            vertices = new Parada[capacidadInicial];
+            vertices = new Parada?[capacidadInicial];
             adyacencias = new ListaPropia<AristaRuta>[capacidadInicial];
             numVertices = 0;
         }
@@ -34,14 +60,14 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         /// Agrega una parada al grafo si no existe previamente por su código.
         /// </summary>
         /// <param name="parada">Instancia de la parada a agregar.</param>
-        /// <returns>True si fue agregada; false si ya existía.</returns>
+        /// <returns>True si fue agregada; false si ya existía activa.</returns>
         public bool AgregarParada(Parada parada)
         {
             if (parada == null)
                 throw new ArgumentNullException(nameof(parada));
 
             if (ObtenerIndiceParada(parada.Codigo) != -1)
-                return false; // Ya existe
+                return false; // Ya existe activo
 
             if (numVertices == vertices.Length)
             {
@@ -67,17 +93,17 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             int u = ObtenerIndiceParada(codigoOrigen);
             int v = ObtenerIndiceParada(codigoDestino);
 
-            if (u == -1)
-                throw new ArgumentException($"La parada de origen con código '{codigoOrigen}' no existe en el grafo.", nameof(codigoOrigen));
-            if (v == -1)
-                throw new ArgumentException($"La parada de destino con código '{codigoDestino}' no existe en el grafo.", nameof(codigoDestino));
+            if (u == -1 || vertices[u] == null)
+                throw new ArgumentException($"La parada de origen con código '{codigoOrigen}' no existe en el grafo o está inactiva.", nameof(codigoOrigen));
+            if (v == -1 || vertices[v] == null)
+                throw new ArgumentException($"La parada de destino con código '{codigoDestino}' no existe en el grafo o está inactiva.", nameof(codigoDestino));
 
-            AristaRuta rutaIda = new AristaRuta(vertices[u], vertices[v], tiempo, costo, esBidireccional);
+            AristaRuta rutaIda = new AristaRuta(vertices[u]!, vertices[v]!, tiempo, costo, esBidireccional);
             adyacencias[u].Agregar(rutaIda);
 
             if (esBidireccional)
             {
-                AristaRuta rutaVuelta = new AristaRuta(vertices[v], vertices[u], tiempo, costo, esBidireccional);
+                AristaRuta rutaVuelta = new AristaRuta(vertices[v]!, vertices[u]!, tiempo, costo, esBidireccional);
                 adyacencias[v].Agregar(rutaVuelta);
             }
         }
@@ -95,6 +121,8 @@ namespace TransporteUrbanoEDD.Core.Estructuras
 
         /// <summary>
         /// Obtiene el índice numérico interno de una parada por su código.
+        /// Retorna -1 si no existe o si fue dada de baja (posición null).
+        /// Valida de forma segura codigosParadas[i] != null para evitar NullReferenceException.
         /// </summary>
         public int ObtenerIndiceParada(string codigo)
         {
@@ -104,9 +132,12 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             string buscado = codigo.Trim();
             for (int i = 0; i < numVertices; i++)
             {
-                if (string.Equals(vertices[i].Codigo, buscado, StringComparison.OrdinalIgnoreCase))
+                if (vertices[i] != null && !string.IsNullOrWhiteSpace(vertices[i]!.Codigo))
                 {
-                    return i;
+                    if (string.Equals(vertices[i]!.Codigo, buscado, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return i;
+                    }
                 }
             }
 
@@ -114,7 +145,16 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         }
 
         /// <summary>
-        /// Obtiene una parada a partir de su código único.
+        /// Alias requerido por integración y especificación técnica:
+        /// Obtiene el identificador numérico interno del vértice a partir de su código.
+        /// </summary>
+        public int ObtenerIdVertice(string codigoParada)
+        {
+            return ObtenerIndiceParada(codigoParada);
+        }
+
+        /// <summary>
+        /// Obtiene una parada a partir de su código único. Retorna null si no existe o fue dada de baja.
         /// </summary>
         public Parada? ObtenerParadaPorCodigo(string codigo)
         {
@@ -123,9 +163,9 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         }
 
         /// <summary>
-        /// Obtiene una parada por su índice interno.
+        /// Obtiene una parada por su índice interno. Retorna null si la posición fue dada de baja.
         /// </summary>
-        public Parada ObtenerParadaPorIndice(int indice)
+        public Parada? ObtenerParadaPorIndice(int indice)
         {
             if (indice < 0 || indice >= numVertices)
                 throw new ArgumentOutOfRangeException(nameof(indice), "Índice de parada fuera de rango.");
@@ -139,67 +179,297 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         public ListaPropia<AristaRuta> ObtenerRutasSalientes(string codigoParada)
         {
             int idx = ObtenerIndiceParada(codigoParada);
-            if (idx == -1)
-                throw new ArgumentException($"La parada '{codigoParada}' no existe en el grafo.", nameof(codigoParada));
+            if (idx == -1 || vertices[idx] == null)
+                throw new ArgumentException($"La parada '{codigoParada}' no existe en el grafo o está inactiva.", nameof(codigoParada));
 
             return adyacencias[idx];
         }
 
         /// <summary>
-        /// Retorna la lista de adyacencias directa por índice interno (útil para algoritmos como Dijkstra).
+        /// Retorna la lista de adyacencias directa por índice interno.
+        /// Retorna una lista vacía si el vértice fue dado de baja.
         /// </summary>
         public ListaPropia<AristaRuta> ObtenerAdyacenciasPorIndice(int indice)
         {
             if (indice < 0 || indice >= numVertices)
                 throw new ArgumentOutOfRangeException(nameof(indice), "Índice de vértice inválido.");
 
+            if (vertices[indice] == null || adyacencias[indice] == null)
+                return new ListaPropia<AristaRuta>();
+
             return adyacencias[indice];
         }
 
         /// <summary>
-        /// Retorna todas las paradas registradas en el grafo en una ListaPropia.
+        /// Retorna todas las paradas activas registradas en el grafo en una ListaPropia.
         /// </summary>
         public ListaPropia<Parada> ObtenerTodasLasParadas()
         {
             ListaPropia<Parada> lista = new ListaPropia<Parada>();
             for (int i = 0; i < numVertices; i++)
             {
-                lista.Agregar(vertices[i]);
+                if (vertices[i] != null)
+                {
+                    lista.Agregar(vertices[i]!);
+                }
             }
             return lista;
         }
 
         /// <summary>
-        /// Retorna todas las rutas registradas en el grafo.
+        /// Retorna todas las rutas activas registradas en el grafo.
         /// </summary>
         public ListaPropia<AristaRuta> ObtenerTodasLasRutas()
         {
             ListaPropia<AristaRuta> todas = new ListaPropia<AristaRuta>();
             for (int i = 0; i < numVertices; i++)
             {
-                foreach (AristaRuta ruta in adyacencias[i])
+                if (vertices[i] != null && adyacencias[i] != null)
                 {
-                    todas.Agregar(ruta);
+                    foreach (AristaRuta ruta in adyacencias[i])
+                    {
+                        if (ruta != null && ruta.Destino != null && ObtenerIndiceParada(ruta.Destino.Codigo) != -1)
+                        {
+                            todas.Agregar(ruta);
+                        }
+                    }
                 }
             }
             return todas;
         }
+
+        #region Eliminación de Paradas y Rutas (Baja de Vértice + Purga Total)
+
+        /// <summary>
+        /// Da de baja una parada en el sistema aplicando la estrategia:
+        /// "Baja del Vértice + Purga Total de Aristas", sin desplazar ni reindexar
+        /// los índices del arreglo para no desfasar los identificadores sincronizados con UnionFindZonas.
+        /// 
+        /// Pasos ejecutados:
+        /// 1. Busca idEliminar = ObtenerIdVertice(codigoParada). Si es -1, retorna false.
+        /// 2. Paso A (Aristas Salientes): Vacía o reinicia con una nueva instancia vacía adyacencias[idEliminar].
+        /// 3. Paso B (Aristas Entrantes): Recorre todas las listas de adyacencia de los demás vértices activos
+        ///    y purga cualquier arista cuyo destino coincida con idEliminar manipulando punteros (Cabeza, Siguiente, Cola).
+        /// 4. Paso C (Baja del Vértice): Marca la posición en el arreglo vertices[idEliminar] = null.
+        /// </summary>
+        /// <param name="codigoParada">Código único de la parada a dar de baja.</param>
+        /// <returns>True si la parada existía y fue dada de baja con éxito; false si no existía o ya estaba inactiva.</returns>
+        public bool EliminarParada(string codigoParada)
+        {
+            if (string.IsNullOrWhiteSpace(codigoParada))
+                return false;
+
+            int idEliminar = ObtenerIdVertice(codigoParada);
+            if (idEliminar == -1 || vertices[idEliminar] == null)
+                return false;
+
+            string codEliminar = vertices[idEliminar]!.Codigo;
+
+            // Paso A (Aristas Salientes): Vacía o reinicia con una nueva instancia vacía la lista de adyacencia de idEliminar
+            adyacencias[idEliminar] = new ListaPropia<AristaRuta>();
+
+            // Paso B (Aristas Entrantes): Recorre todas las listas de adyacencia de todos los demás vértices activos (0 hasta CantidadParadas - 1)
+            // y elimina cualquier nodo/arista cuyo destino coincida con idEliminar manipulando punteros en Cabeza o intermedios.
+            for (int i = 0; i < numVertices; i++)
+            {
+                if (i == idEliminar || vertices[i] == null || adyacencias[i] == null)
+                    continue;
+
+                EliminarAristasHaciaDestino(adyacencias[i], codEliminar);
+            }
+
+            // Paso C (Baja del Vértice): Marca la posición en el arreglo como null
+            vertices[idEliminar] = null;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Elimina de forma precisa una ruta/conexión entre dos paradas específicas sin dar de baja las paradas.
+        /// Manipula directamente los punteros de la lista enlazada propia (Cabeza, Siguiente, Cola).
+        /// </summary>
+        /// <param name="codOrigen">Código de la parada de origen.</param>
+        /// <param name="codDestino">Código de la parada de destino.</param>
+        /// <param name="esDobleVia">True para eliminar la conexión en ambos sentidos; False para solo la vía de ida.</param>
+        /// <returns>True si se eliminó al menos una conexión; false si alguna parada no existe o no estaban conectadas.</returns>
+        public bool EliminarRuta(string codOrigen, string codDestino, bool esDobleVia = true)
+        {
+            if (string.IsNullOrWhiteSpace(codOrigen) || string.IsNullOrWhiteSpace(codDestino))
+                return false;
+
+            int u = ObtenerIndiceParada(codOrigen);
+            int v = ObtenerIndiceParada(codDestino);
+
+            if (u == -1 || v == -1 || vertices[u] == null || vertices[v] == null)
+                return false;
+
+            bool eliminadaIda = EliminarAristaSimple(adyacencias[u], codDestino);
+            bool eliminadaVuelta = false;
+
+            if (esDobleVia)
+            {
+                eliminadaVuelta = EliminarAristaSimple(adyacencias[v], codOrigen);
+            }
+
+            return eliminadaIda || eliminadaVuelta;
+        }
+
+        /// <summary>
+        /// Sobrecarga para eliminar ruta utilizando instancias de Parada.
+        /// </summary>
+        public bool EliminarRuta(Parada origen, Parada destino, bool esDobleVia = true)
+        {
+            if (origen == null || destino == null)
+                return false;
+
+            return EliminarRuta(origen.Codigo, destino.Codigo, esDobleVia);
+        }
+
+        /// <summary>
+        /// Verifica si existe una conexión directa desde una parada origen hacia una parada destino.
+        /// </summary>
+        public bool ExisteRuta(string codOrigen, string codDestino)
+        {
+            int u = ObtenerIndiceParada(codOrigen);
+            if (u == -1 || vertices[u] == null || adyacencias[u] == null)
+                return false;
+
+            foreach (AristaRuta arista in adyacencias[u])
+            {
+                if (arista != null && arista.Destino != null &&
+                    string.Equals(arista.Destino.Codigo, codDestino, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Purga todas las aristas de una lista enlazada de adyacencia que se dirijan hacia codigoDestino,
+        /// manipulando directamente los punteros de los nodos (Cabeza, Siguiente, Cola),
+        /// manejando correctamente tanto el caso en que la arista esté en la Cabeza como en nodos intermedios.
+        /// </summary>
+        private bool EliminarAristasHaciaDestino(ListaPropia<AristaRuta> lista, string codigoDestino)
+        {
+            if (lista == null || lista.Cabeza == null)
+                return false;
+
+            bool seElimino = false;
+            NodoLista<AristaRuta>? anterior = null;
+            NodoLista<AristaRuta>? actual = lista.Cabeza;
+
+            while (actual != null)
+            {
+                bool coincide = actual.Dato != null &&
+                                actual.Dato.Destino != null &&
+                                string.Equals(actual.Dato.Destino.Codigo, codigoDestino, StringComparison.OrdinalIgnoreCase);
+
+                if (coincide)
+                {
+                    NodoLista<AristaRuta> nodoAEliminar = actual;
+
+                    if (anterior == null) // Caso: La arista a borrar está en la Cabeza
+                    {
+                        lista.Cabeza = actual.Siguiente;
+                        actual = lista.Cabeza;
+                    }
+                    else // Caso: La arista está en un nodo intermedio o final
+                    {
+                        anterior.Siguiente = actual.Siguiente;
+                        actual = anterior.Siguiente;
+                    }
+
+                    if (nodoAEliminar == lista.Cola)
+                    {
+                        lista.Cola = anterior;
+                    }
+
+                    lista.DecrementarContador();
+                    seElimino = true;
+                }
+                else
+                {
+                    anterior = actual;
+                    actual = actual.Siguiente;
+                }
+            }
+
+            if (lista.Cabeza == null)
+            {
+                lista.Cola = null;
+            }
+
+            return seElimino;
+        }
+
+        /// <summary>
+        /// Elimina una única arista dirigida hacia codigoDestino manipulando punteros de la lista enlazada propia.
+        /// </summary>
+        private bool EliminarAristaSimple(ListaPropia<AristaRuta> lista, string codigoDestino)
+        {
+            if (lista == null || lista.Cabeza == null)
+                return false;
+
+            NodoLista<AristaRuta>? anterior = null;
+            NodoLista<AristaRuta>? actual = lista.Cabeza;
+
+            while (actual != null)
+            {
+                if (actual.Dato != null &&
+                    actual.Dato.Destino != null &&
+                    string.Equals(actual.Dato.Destino.Codigo, codigoDestino, StringComparison.OrdinalIgnoreCase))
+                {
+                    NodoLista<AristaRuta> nodoAEliminar = actual;
+
+                    if (anterior == null) // Caso: Arista en la Cabeza
+                    {
+                        lista.Cabeza = actual.Siguiente;
+                    }
+                    else // Caso: Arista en nodo intermedio o Cola
+                    {
+                        anterior.Siguiente = actual.Siguiente;
+                    }
+
+                    if (nodoAEliminar == lista.Cola)
+                    {
+                        lista.Cola = anterior;
+                    }
+
+                    if (lista.Cabeza == null)
+                    {
+                        lista.Cola = null;
+                    }
+
+                    lista.DecrementarContador();
+                    return true;
+                }
+
+                anterior = actual;
+                actual = actual.Siguiente;
+            }
+
+            return false;
+        }
+
+        #endregion
 
         #region Recorridos: BFS y DFS
 
         /// <summary>
         /// Recorrido en Anchura (Breadth-First Search).
         /// Explora la red nivel por nivel desde la parada indicada.
-        /// Cumple estrictamente la regla del proyecto: usa Queue de System.Collections.Generic
-        /// única y exclusivamente como estructura de control de orden de visita en BFS.
+        /// Ignora de forma segura cualquier vértice nulo o dado de baja.
+        /// Usa Queue de System.Collections.Generic exclusivamente como estructura de control de orden en BFS.
         /// </summary>
         /// <param name="codigoInicio">Código de la parada de inicio.</param>
         /// <returns>Lista enlazada propia con las paradas en orden de visita BFS.</returns>
         public ListaPropia<Parada> RecorridoBFS(string codigoInicio)
         {
             int inicio = ObtenerIndiceParada(codigoInicio);
-            if (inicio == -1)
-                throw new ArgumentException($"La parada inicial '{codigoInicio}' no existe en el grafo.", nameof(codigoInicio));
+            if (inicio == -1 || vertices[inicio] == null)
+                throw new ArgumentException($"La parada inicial '{codigoInicio}' no existe en el grafo o está inactiva.", nameof(codigoInicio));
 
             ListaPropia<Parada> ordenVisita = new ListaPropia<Parada>();
             bool[] visitados = new bool[numVertices];
@@ -211,15 +481,24 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             while (cola.Count > 0)
             {
                 int actual = cola.Dequeue();
-                ordenVisita.Agregar(vertices[actual]);
+                if (vertices[actual] == null)
+                    continue;
 
-                foreach (AristaRuta arista in adyacencias[actual])
+                ordenVisita.Agregar(vertices[actual]!);
+
+                if (adyacencias[actual] != null)
                 {
-                    int vecino = ObtenerIndiceParada(arista.Destino.Codigo);
-                    if (vecino != -1 && !visitados[vecino])
+                    foreach (AristaRuta arista in adyacencias[actual])
                     {
-                        visitados[vecino] = true;
-                        cola.Enqueue(vecino);
+                        if (arista == null || arista.Destino == null)
+                            continue;
+
+                        int vecino = ObtenerIndiceParada(arista.Destino.Codigo);
+                        if (vecino != -1 && vertices[vecino] != null && !visitados[vecino])
+                        {
+                            visitados[vecino] = true;
+                            cola.Enqueue(vecino);
+                        }
                     }
                 }
             }
@@ -228,17 +507,22 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         }
 
         /// <summary>
+        /// Alias para el recorrido BFS cumpliendo con los estándares de nomenclatura de integración.
+        /// </summary>
+        public ListaPropia<Parada> EjecutarBFS(string codigoInicio) => RecorridoBFS(codigoInicio);
+
+        /// <summary>
         /// Recorrido en Profundidad (Depth-First Search).
         /// Explora la red profundizando en cada ramal antes de retroceder.
-        /// Implementado de forma recursiva sin colecciones prohibidas.
+        /// Ignora de forma segura cualquier vértice nulo o dado de baja.
         /// </summary>
         /// <param name="codigoInicio">Código de la parada de inicio.</param>
         /// <returns>Lista enlazada propia con las paradas en orden de visita DFS.</returns>
         public ListaPropia<Parada> RecorridoDFS(string codigoInicio)
         {
             int inicio = ObtenerIndiceParada(codigoInicio);
-            if (inicio == -1)
-                throw new ArgumentException($"La parada inicial '{codigoInicio}' no existe en el grafo.", nameof(codigoInicio));
+            if (inicio == -1 || vertices[inicio] == null)
+                throw new ArgumentException($"La parada inicial '{codigoInicio}' no existe en el grafo o está inactiva.", nameof(codigoInicio));
 
             ListaPropia<Parada> ordenVisita = new ListaPropia<Parada>();
             bool[] visitados = new bool[numVertices];
@@ -248,17 +532,31 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             return ordenVisita;
         }
 
+        /// <summary>
+        /// Alias para el recorrido DFS cumpliendo con los estándares de nomenclatura de integración.
+        /// </summary>
+        public ListaPropia<Parada> EjecutarDFS(string codigoInicio) => RecorridoDFS(codigoInicio);
+
         private void EjecutarDfsRecursivo(int actual, bool[] visitados, ListaPropia<Parada> ordenVisita)
         {
-            visitados[actual] = true;
-            ordenVisita.Agregar(vertices[actual]);
+            if (actual < 0 || actual >= numVertices || vertices[actual] == null)
+                return;
 
-            foreach (AristaRuta arista in adyacencias[actual])
+            visitados[actual] = true;
+            ordenVisita.Agregar(vertices[actual]!);
+
+            if (adyacencias[actual] != null)
             {
-                int vecino = ObtenerIndiceParada(arista.Destino.Codigo);
-                if (vecino != -1 && !visitados[vecino])
+                foreach (AristaRuta arista in adyacencias[actual])
                 {
-                    EjecutarDfsRecursivo(vecino, visitados, ordenVisita);
+                    if (arista == null || arista.Destino == null)
+                        continue;
+
+                    int vecino = ObtenerIndiceParada(arista.Destino.Codigo);
+                    if (vecino != -1 && vertices[vecino] != null && !visitados[vecino])
+                    {
+                        EjecutarDfsRecursivo(vecino, visitados, ordenVisita);
+                    }
                 }
             }
         }
@@ -270,6 +568,7 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         /// <summary>
         /// Calcula la ruta óptima entre dos paradas utilizando el Algoritmo de Dijkstra con MinHeapPropio.
         /// Cumple estrictamente la regla de no usar List, PriorityQueue, Stack ni LINQ.
+        /// Ignora de forma segura cualquier vértice nulo o dado de baja.
         /// </summary>
         /// <param name="codOrigen">Código de la parada de origen.</param>
         /// <param name="codDestino">Código de la parada de destino.</param>
@@ -282,17 +581,17 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             int uOrigen = ObtenerIndiceParada(codOrigen);
             int uDestino = ObtenerIndiceParada(codDestino);
 
-            if (uOrigen == -1)
+            if (uOrigen == -1 || vertices[uOrigen] == null)
             {
                 resultado.ExisteRuta = false;
-                resultado.MensajeEstado = $"La parada de origen '{codOrigen}' no existe en el sistema.";
+                resultado.MensajeEstado = $"La parada de origen '{codOrigen}' no existe en el sistema o fue dada de baja.";
                 return resultado;
             }
 
-            if (uDestino == -1)
+            if (uDestino == -1 || vertices[uDestino] == null)
             {
                 resultado.ExisteRuta = false;
-                resultado.MensajeEstado = $"La parada de destino '{codDestino}' no existe en el sistema.";
+                resultado.MensajeEstado = $"La parada de destino '{codDestino}' no existe en el sistema o fue dada de baja.";
                 return resultado;
             }
 
@@ -301,10 +600,10 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             {
                 resultado.ExisteRuta = true;
                 resultado.MensajeEstado = "El origen y el destino corresponden a la misma parada.";
-                resultado.ResumenCamino = vertices[uOrigen].Codigo;
+                resultado.ResumenCamino = vertices[uOrigen]!.Codigo;
                 resultado.CostoTotal = 0.0;
                 resultado.TiempoTotalMinutos = 0.0;
-                resultado.SecuenciaCodigosParadas.Agregar(vertices[uOrigen].Codigo);
+                resultado.SecuenciaCodigosParadas.Agregar(vertices[uOrigen]!.Codigo);
                 return resultado;
             }
 
@@ -345,23 +644,29 @@ namespace TransporteUrbanoEDD.Core.Estructuras
                 if (u == uDestino)
                     break; // Destino alcanzado de forma óptima
 
-                foreach (AristaRuta arista in adyacencias[u])
+                if (adyacencias[u] != null)
                 {
-                    int v = ObtenerIndiceParada(arista.Destino.Codigo);
-                    if (v == -1 || visitado[v])
-                        continue;
-
-                    double pesoEvaluado = optimizarPorTiempo ? arista.Tiempo : arista.Costo;
-                    double nuevaMetrica = mejorMetrica[u] + pesoEvaluado;
-
-                    if (nuevaMetrica < mejorMetrica[v])
+                    foreach (AristaRuta arista in adyacencias[u])
                     {
-                        mejorMetrica[v] = nuevaMetrica;
-                        tiempoAcumulado[v] = tiempoAcumulado[u] + arista.Tiempo;
-                        costoAcumulado[v] = costoAcumulado[u] + arista.Costo;
-                        predecesor[v] = u;
+                        if (arista == null || arista.Destino == null)
+                            continue;
 
-                        heap.Insertar(v, nuevaMetrica);
+                        int v = ObtenerIndiceParada(arista.Destino.Codigo);
+                        if (v == -1 || vertices[v] == null || visitado[v])
+                            continue;
+
+                        double pesoEvaluado = optimizarPorTiempo ? arista.Tiempo : arista.Costo;
+                        double nuevaMetrica = mejorMetrica[u] + pesoEvaluado;
+
+                        if (nuevaMetrica < mejorMetrica[v])
+                        {
+                            mejorMetrica[v] = nuevaMetrica;
+                            tiempoAcumulado[v] = tiempoAcumulado[u] + arista.Tiempo;
+                            costoAcumulado[v] = costoAcumulado[u] + arista.Costo;
+                            predecesor[v] = u;
+
+                            heap.Insertar(v, nuevaMetrica);
+                        }
                     }
                 }
             }
@@ -398,7 +703,10 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             for (int i = cantidadNodosCamino - 1; i >= 0; i--)
             {
                 int indiceVertice = caminoInverso[i];
-                string codigoParada = vertices[indiceVertice].Codigo;
+                if (vertices[indiceVertice] == null)
+                    continue;
+
+                string codigoParada = vertices[indiceVertice]!.Codigo;
 
                 resultado.SecuenciaCodigosParadas.Agregar(codigoParada);
 
@@ -424,7 +732,7 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         }
 
         /// <summary>
-        /// Verifica si una parada existe en el grafo mediante su código.
+        /// Verifica si una parada existe activa en el grafo mediante su código.
         /// </summary>
         public bool ExisteParada(string codigo)
         {
@@ -434,12 +742,13 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         #endregion
 
         /// <summary>
-        /// Duplica el tamaño de los arreglos internos cuando se supera la capacidad.
+        /// Duplica el tamaño de los arreglos internos cuando se supera la capacidad,
+        /// preservando las posiciones e índices de los vértices existentes para no desfasar identificadores.
         /// </summary>
         private void Redimensionar()
         {
             int nuevaCapacidad = vertices.Length * 2;
-            Parada[] nuevosVertices = new Parada[nuevaCapacidad];
+            Parada?[] nuevosVertices = new Parada?[nuevaCapacidad];
             ListaPropia<AristaRuta>[] nuevasAdyacencias = new ListaPropia<AristaRuta>[nuevaCapacidad];
 
             for (int i = 0; i < numVertices; i++)

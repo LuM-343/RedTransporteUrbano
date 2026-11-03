@@ -1,6 +1,5 @@
 // Lista enlazada propia
 namespace TransporteUrbanoEDD.Core.Estructuras
-
 {
     // Nodo: guarda un dato y el enlace al siguiente
     public class NodoLista<T>
@@ -21,11 +20,57 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         private NodoLista<T>? cola; // Último nodo (agregar en O(1))
         public int Count { get; private set; }
 
+        /// <summary>
+        /// Acceso al primer nodo de la lista enlazada para manipulación directa de punteros.
+        /// </summary>
+        public NodoLista<T>? Cabeza
+        {
+            get => cabeza;
+            set
+            {
+                cabeza = value;
+                if (cabeza == null)
+                {
+                    cola = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Acceso al último nodo de la lista enlazada para manipulación directa de punteros.
+        /// </summary>
+        public NodoLista<T>? Cola
+        {
+            get => cola;
+            set => cola = value;
+        }
+
         public ListaPropia()
         {
             cabeza = null;
             cola = null;
             Count = 0;
+        }
+
+        /// <summary>
+        /// Vacía completamente la lista enlazada restableciendo punteros y contador a cero.
+        /// </summary>
+        public void Vaciar()
+        {
+            cabeza = null;
+            cola = null;
+            Count = 0;
+        }
+
+        /// <summary>
+        /// Decrementa el contador interno tras una remoción manual de nodo.
+        /// </summary>
+        public void DecrementarContador()
+        {
+            if (Count > 0)
+            {
+                Count--;
+            }
         }
 
         // Agrega al final: O(1)
@@ -67,7 +112,7 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         public bool Contiene(T dato)
         {
             NodoLista<T>? actual = cabeza;
-            while (actual!= null) // Recorrer hasta el final
+            while (actual != null) // Recorrer hasta el final
             {
                 if (EqualityComparer<T>.Default.Equals(actual.Dato, dato))
                 {
@@ -101,6 +146,11 @@ namespace TransporteUrbanoEDD.Core.Estructuras
                     if (actual == cola) // Caso 3: era el último
                     {
                         cola = anterior;
+                    }
+
+                    if (cabeza == null)
+                    {
+                        cola = null;
                     }
 
                     Count--;
