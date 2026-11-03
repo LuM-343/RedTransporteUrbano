@@ -457,13 +457,19 @@ namespace TransporteUrbanoEDD.UI.Controles
 
         private string ExtraerCodigo(object? itemSeleccionado)
         {
-            if (itemSeleccionado == null) return string.Empty;
+            if (itemSeleccionado == null)
+                return string.Empty;
+
             string texto = itemSeleccionado.ToString() ?? string.Empty;
-            int guion = texto.IndexOf('-');
-            if (guion > 0)
+
+            // Buscar el separador entre el código y el nombre
+            int separador = texto.IndexOf(" - ", StringComparison.Ordinal);
+
+            if (separador > 0)
             {
-                return texto.Substring(0, guion).Trim();
+                return texto.Substring(0, separador).Trim();
             }
+
             return texto.Trim();
         }
 
