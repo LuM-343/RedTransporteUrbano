@@ -408,3 +408,19 @@ File.WriteAllLines(archivoMalo, new[]
 ResultadoCarga rm = cargador.CargarParadasCSV(archivoMalo);
 Console.WriteLine($"  Archivo con errores: {rm}"); // 1 cargados, 4 con error
 foreach (string e in rm.Errores) Console.WriteLine($"    - {e}");
+
+// -------------------------------------------------------------
+// PRUEBA DEL ORQUESTADOR (flujo integrado)
+// -------------------------------------------------------------
+Console.WriteLine("\n>>> PRUEBA DEL ORQUESTADOR");
+OrquestadorTransporte orq = new OrquestadorTransporte();
+string datos = Path.Combine(AppContext.BaseDirectory, "Datos");
+orq.Cargador.CargarParadasCSV(Path.Combine(datos, "paradas.csv"));
+orq.Cargador.CargarRutasCSV(Path.Combine(datos, "rutas.csv"));
+
+ResultadoRuta r1 = orq.BuscarRutaOptima("PAR-01", "PAR-16", true);
+Console.WriteLine($"  PAR-01 -> PAR-16: {r1.ResumenCamino} | {r1.TiempoTotalMinutos:F1} min"); // 29.1 min
+ResultadoRuta r2 = orq.BuscarRutaOptima("PAR-01", "PAR-20", true);
+Console.WriteLine($"  PAR-01 -> PAR-20: {r2.MensajeEstado}");   // zonas no conectadas (Union-Find)
+ResultadoRuta r3 = orq.BuscarRutaOptima("PAR-01", "PAR-99", true);
+Console.WriteLine($"  PAR-01 -> PAR-99: {r3.MensajeEstado}");   // no existe (Tabla Hash)
