@@ -42,6 +42,12 @@ namespace TransporteUrbanoEDD.UI.Controles
         private Label lblResumenCarga = null!;
         private ListBox lstErroresCarga = null!;
 
+        // Sección conectividad (Union-Find)
+        private ComboBox cboZonaOrigen = null!;
+        private ComboBox cboZonaDestino = null!;
+        private Label lblResultadoZona = null!;
+        private Label lblCantidadZonas = null!;
+
         /// <summary>Se dispara al agregar, eliminar o cargar paradas, para que otras pestañas se refresquen.</summary>
         public event EventHandler? DatosModificados;
 
@@ -78,6 +84,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             panelLateral.Controls.Add(CrearEncabezado());
             panelLateral.Controls.Add(CrearSeccionCrud());
             panelLateral.Controls.Add(CrearSeccionArchivos());
+            panelLateral.Controls.Add(CrearSeccionConectividad());
             // Orden importante: primero el que llena (Fill), después el acoplado a la izquierda
             Controls.Add(CrearPanelBuckets());
             Controls.Add(panelLateral);
@@ -181,6 +188,50 @@ namespace TransporteUrbanoEDD.UI.Controles
                 lblResumenCarga, lstErroresCarga
             });
             return gb;
+        }
+
+        // Sección 3: ¿dos paradas están en la misma zona conectada? (Union-Find)
+        private GroupBox CrearSeccionConectividad()
+        {
+            GroupBox gb = CrearSeccion(" 3. Conectividad de Zonas (Union-Find) ", 196);
+
+            cboZonaOrigen = CrearComboParadas(80, 28);
+            cboZonaDestino = CrearComboParadas(80, 60);
+
+            Button btnVerificar = CrearBoton("Verificar conectividad", Color.FromArgb(147, 51, 234), 12, 96, 336);
+            btnVerificar.Click += BtnVerificar_Click;
+
+            lblResultadoZona = new Label { Location = new Point(12, 136), Size = new Size(336, 20), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
+            lblCantidadZonas = new Label { Location = new Point(12, 160), Size = new Size(336, 20), Font = new Font("Segoe UI", 8.5F), ForeColor = ColorTexto };
+
+            gb.Controls.AddRange(new Control[]
+            {
+                CrearEtiqueta("Origen:", 12, 28), cboZonaOrigen,
+                CrearEtiqueta("Destino:", 12, 60), cboZonaDestino,
+                btnVerificar, lblResultadoZona, lblCantidadZonas
+            });
+            return gb;
+        }
+
+        // ComboBox que guarda objetos Parada y los muestra como "PAR-01 - Parque Central"
+        private static ComboBox CrearComboParadas(int x, int y)
+        {
+            ComboBox combo = new ComboBox
+            {
+                Location = new Point(x, y),
+                Width = 268,
+                DropDownStyle = ComboBoxStyle.DropDownList, // Solo elegir, no escribir
+                FormattingEnabled = true,                   // Necesario para que funcione el evento Format
+                Font = new Font("Segoe UI", 8.5F)
+            };
+
+            // Format solo cambia cómo se ve cada elemento; el elemento sigue siendo la Parada
+            combo.Format += (s, e) =>
+            {
+                if (e.ListItem is Parada p)
+                    e.Value = $"{p.Codigo} - {p.Nombre}";
+            };
+            return combo;
         }
 
         // ---------------------------------------------------------
@@ -325,6 +376,8 @@ namespace TransporteUrbanoEDD.UI.Controles
             lblEstadoTabla.Text = $"Capacidad: {tablaHash.Capacidad}   |   Paradas: {tablaHash.Cantidad}   |   " +
                                   $"Factor de carga: {tablaHash.FactorCarga:F2}   |   Rehashes: {tablaHash.Rehashes}   |   " +
                                   $"Buckets con colisión: {bucketsConColision}";
+
+            ActualizarSeccionZonas(); // Los combos y el conteo de zonas cambian con las paradas
         }
 
         // ---------------------------------------------------------
@@ -435,6 +488,75 @@ namespace TransporteUrbanoEDD.UI.Controles
             numY.Value = 0;
             if (!conservarMensaje)
                 lblMensajeCrud.Text = "";
+        }
+
+        // ---------------------------------------------------------
+        // CONECTIVIDAD (UNION-FIND)
+        // ---------------------------------------------------------
+
+        private void BtnVerificar_Click(object? sender, EventArgs e)
+        {
+            if (unionFind == null)
+                return;
+
+            if (cboZonaOrigen.SelectedItem is not Parada origen || cboZonaDestino.SelectedItem is not Parada destino)
+            {
+                MostrarMensaje(lblResultadoZona, "Elige las dos paradas.", false);
+                return;
+            }
+
+            // O(α(n)): prácticamente constante
+            bool conectadas = unionFind.EstanEnMismaZona(origen.Codigo, destino.Codigo);
+
+            MostrarMensaje(lblResultadoZona,
+                           conectadas ? "Misma zona: se puede calcular la ruta."
+                                      : "Zonas distintas: no hay conexión entre ellas.",
+                           conectadas);
+        }
+
+        // Rellena los dos combos (ordenados por código) y el número de zonas
+        private void ActualizarSeccionZonas()
+        {
+            if (tablaHash == null || unionFind == null)
+                return;
+
+            Parada[] ordenadas = ObtenerParadasOrdenadas();
+
+            cboZonaOrigen.Items.Clear();
+            cboZonaDestino.Items.Clear();
+            foreach (Parada p in ordenadas)
+            {
+                cboZonaOrigen.Items.Add(p);
+                cboZonaDestino.Items.Add(p);
+            }
+
+            lblCantidadZonas.Text = $"Zonas desconectadas en la red: {unionFind.CantidadZonas}";
+        }
+
+        // Copia las paradas a un arreglo y las ordena por código (inserción, sin LINQ). O(n²)
+        private Parada[] ObtenerParadasOrdenadas()
+        {
+            ListaPropia<Parada> todas = tablaHash!.ObtenerTodas();
+            Parada[] arreglo = new Parada[todas.Count];
+
+            int n = 0;
+            foreach (Parada p in todas)
+                arreglo[n++] = p;
+
+            // Ordenamiento por inserción: cada parada se mueve a la izquierda hasta su lugar
+            for (int i = 1; i < arreglo.Length; i++)
+            {
+                Parada actual = arreglo[i];
+                int j = i - 1;
+                while (j >= 0 && string.CompareOrdinal(arreglo[j].Codigo, actual.Codigo) > 0)
+                {
+                    arreglo[j + 1] = arreglo[j];
+                    j--;
+                }
+                arreglo[j + 1] = actual;
+            }
+
+            return arreglo;
         }
 
         // ---------------------------------------------------------
