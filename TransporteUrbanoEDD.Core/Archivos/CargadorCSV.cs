@@ -240,6 +240,66 @@ namespace TransporteUrbanoEDD.Core.Archivos
         }
 
         // ---------------------------------------------------------
+        // ESCRITURA DE ARCHIVOS CSV
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Guarda todas las paradas en un CSV con el mismo formato que se carga. O(n + m).
+        /// Devuelve null si tuvo éxito, o el mensaje de error.
+        /// </summary>
+        public string? GuardarParadasCSV(string rutaArchivo)
+        {
+            try
+            {
+                // UTF-8 sin BOM para que el encabezado se lea igual al volver a cargarlo
+                using StreamWriter escritor = new StreamWriter(rutaArchivo, false, new UTF8Encoding(false));
+                escritor.WriteLine("Codigo,Nombre,X,Y,Zona");
+
+                foreach (Parada p in tablaHash.ObtenerTodas())
+                    escritor.WriteLine($"{p.Codigo},{p.Nombre},{Numero(p.X)},{Numero(p.Y)},{p.Zona}");
+
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return $"No se pudo guardar: {ex.Message}";
+            }
+        }
+
+        /// <summary>
+        /// Guarda todas las rutas en un CSV. Las de doble sentido se escriben una sola vez.
+        /// Devuelve null si tuvo éxito, o el mensaje de error.
+        /// </summary>
+        public string? GuardarRutasCSV(string rutaArchivo)
+        {
+            try
+            {
+                using StreamWriter escritor = new StreamWriter(rutaArchivo, false, new UTF8Encoding(false));
+                escritor.WriteLine("Origen,Destino,Tiempo,Costo,Bidireccional");
+
+                foreach (AristaRuta r in grafo.ObtenerTodasLasRutas())
+                {
+                    // El grafo guarda la ida y la vuelta: se escribe solo la de índice menor a mayor
+                    if (r.EsBidireccional && r.Origen.Indice > r.Destino.Indice)
+                        continue;
+
+                    escritor.WriteLine($"{r.Origen.Codigo},{r.Destino.Codigo},{Numero(r.Tiempo)}," +
+                                       $"{Numero(r.Costo)},{(r.EsBidireccional ? "true" : "false")}");
+                }
+
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return $"No se pudo guardar: {ex.Message}";
+            }
+        }
+
+        // Número con punto decimal, igual que se lee (InvariantCulture)
+        private static string Numero(double valor)
+            => valor.ToString(CultureInfo.InvariantCulture);
+
+        // ---------------------------------------------------------
         // AUXILIARES DE LECTURA
         // ---------------------------------------------------------
 

@@ -38,6 +38,10 @@ namespace TransporteUrbanoEDD.UI.Controles
         private NumericUpDown numY = null!;
         private Label lblMensajeCrud = null!;
 
+        // Sección archivos CSV
+        private Label lblResumenCarga = null!;
+        private ListBox lstErroresCarga = null!;
+
         /// <summary>Se dispara al agregar, eliminar o cargar paradas, para que otras pestañas se refresquen.</summary>
         public event EventHandler? DatosModificados;
 
@@ -73,7 +77,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             };
             panelLateral.Controls.Add(CrearEncabezado());
             panelLateral.Controls.Add(CrearSeccionCrud());
-
+            panelLateral.Controls.Add(CrearSeccionArchivos());
             // Orden importante: primero el que llena (Fill), después el acoplado a la izquierda
             Controls.Add(CrearPanelBuckets());
             Controls.Add(panelLateral);
@@ -137,6 +141,44 @@ namespace TransporteUrbanoEDD.UI.Controles
                 CrearEtiqueta("Zona:", 12, 124), txtZona,
                 btnAgregar, btnBuscar, btnEliminar, btnLimpiar,
                 lblMensajeCrud
+            });
+            return gb;
+        }
+
+        // Sección 2: cargar y guardar paradas.csv y rutas.csv, con la lista de errores
+        private GroupBox CrearSeccionArchivos()
+        {
+            GroupBox gb = CrearSeccion(" 2. Archivos CSV ", 236);
+
+            Button btnCargarParadas = CrearBoton("Cargar paradas", Color.FromArgb(37, 99, 235), 12, 28, 166);
+            Button btnCargarRutas = CrearBoton("Cargar rutas", Color.FromArgb(37, 99, 235), 182, 28, 166);
+            Button btnGuardarParadas = CrearBoton("Guardar paradas", Color.FromArgb(100, 116, 139), 12, 66, 166);
+            Button btnGuardarRutas = CrearBoton("Guardar rutas", Color.FromArgb(100, 116, 139), 182, 66, 166);
+            btnCargarParadas.Click += (s, e) => CargarArchivo(esParadas: true);
+            btnCargarRutas.Click += (s, e) => CargarArchivo(esParadas: false);
+            btnGuardarParadas.Click += (s, e) => GuardarArchivo(esParadas: true);
+            btnGuardarRutas.Click += (s, e) => GuardarArchivo(esParadas: false);
+
+            lblResumenCarga = new Label
+            {
+                Location = new Point(12, 106),
+                Size = new Size(336, 20),
+                Font = new Font("Segoe UI", 8.5F),
+                Text = "Primero las paradas, después las rutas."
+            };
+
+            lstErroresCarga = new ListBox
+            {
+                Location = new Point(12, 130),
+                Size = new Size(336, 94),
+                Font = new Font("Consolas", 8F),
+                HorizontalScrollbar = true // Los mensajes largos se leen desplazando
+            };
+
+            gb.Controls.AddRange(new Control[]
+            {
+                btnCargarParadas, btnCargarRutas, btnGuardarParadas, btnGuardarRutas,
+                lblResumenCarga, lstErroresCarga
             });
             return gb;
         }
@@ -393,6 +435,72 @@ namespace TransporteUrbanoEDD.UI.Controles
             numY.Value = 0;
             if (!conservarMensaje)
                 lblMensajeCrud.Text = "";
+        }
+
+        // ---------------------------------------------------------
+        // EVENTOS DE ARCHIVOS CSV
+        // ---------------------------------------------------------
+
+        // Abre el selector de archivos, carga el CSV y muestra el resultado con sus errores
+        private void CargarArchivo(bool esParadas)
+        {
+            if (cargador == null)
+                return;
+
+            using OpenFileDialog dialogo = new OpenFileDialog
+            {
+                Title = esParadas ? "Seleccionar archivo de paradas" : "Seleccionar archivo de rutas",
+                Filter = "Archivos CSV o TXT|*.csv;*.txt|Todos los archivos|*.*"
+            };
+
+            // Abrir en la carpeta Datos si existe (junto al programa)
+            string carpetaDatos = Path.Combine(AppContext.BaseDirectory, "Datos");
+            if (Directory.Exists(carpetaDatos))
+                dialogo.InitialDirectory = carpetaDatos;
+
+            if (dialogo.ShowDialog() != DialogResult.OK)
+                return; // El usuario canceló
+
+            ResultadoCarga resultado = esParadas
+                ? cargador.CargarParadasCSV(dialogo.FileName)
+                : cargador.CargarRutasCSV(dialogo.FileName);
+
+            // Resumen en verde si no hubo errores, en rojo si hubo
+            string tipo = esParadas ? "Paradas" : "Rutas";
+            MostrarMensaje(lblResumenCarga, $"{tipo}: {resultado}", resultado.Errores.Count == 0);
+
+            // Detalle de cada línea con error
+            lstErroresCarga.Items.Clear();
+            foreach (string error in resultado.Errores)
+                lstErroresCarga.Items.Add(error);
+
+            ActualizarVistaBuckets();
+            DatosModificados?.Invoke(this, EventArgs.Empty);
+        }
+
+        // Abre el diálogo "Guardar como" y escribe las paradas o rutas actuales
+        private void GuardarArchivo(bool esParadas)
+        {
+            if (cargador == null)
+                return;
+
+            using SaveFileDialog dialogo = new SaveFileDialog
+            {
+                Title = esParadas ? "Guardar paradas" : "Guardar rutas",
+                Filter = "Archivo CSV|*.csv",
+                FileName = esParadas ? "paradas.csv" : "rutas.csv"
+            };
+
+            if (dialogo.ShowDialog() != DialogResult.OK)
+                return;
+
+            string? error = esParadas
+                ? cargador.GuardarParadasCSV(dialogo.FileName)
+                : cargador.GuardarRutasCSV(dialogo.FileName);
+
+            MostrarMensaje(lblResumenCarga,
+                           error ?? $"Guardado en {Path.GetFileName(dialogo.FileName)}.",
+                           error == null);
         }
     }
 }
