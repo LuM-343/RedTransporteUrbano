@@ -16,10 +16,17 @@ namespace TransporteUrbanoEDD.UI.Controles
     public class VistaRutasGrafoControl : UserControl
     {
         // Referencias a datos del Core
+        private OrquestadorTransporte? orquestador;
         private GrafoTransporte? grafo;
         private ResultadoRuta? rutaActiva;
         private ListaPropia<Parada>? recorridoActivo;
         private string tipoRecorridoActivo = string.Empty;
+
+        /// <summary>
+        /// Evento notificado cuando se registra exitosamente una nueva ruta.
+        /// Permite a FormPrincipal refrescar la barra de estado y la conectividad en otras pestañas.
+        /// </summary>
+        public event EventHandler? RutaRegistrada;
 
         // Controles de interfaz (Panel Izquierdo)
         private Panel panelLateral = null!;
@@ -408,6 +415,18 @@ namespace TransporteUrbanoEDD.UI.Controles
         /// <summary>
         /// Conecta la estructura del GrafoTransporte con el control visual y actualiza los componentes.
         /// </summary>
+        /// <summary>
+        /// Conecta el Orquestador central con el control visual y actualiza los componentes.
+        /// Permite calcular rutas con orquestador.BuscarRutaOptima y registrar rutas con orquestador.Cargador.RegistrarRuta.
+        /// </summary>
+        public void ConectarDatos(OrquestadorTransporte orquestadorTransporte)
+        {
+            orquestador = orquestadorTransporte ?? throw new ArgumentNullException(nameof(orquestadorTransporte));
+            grafo = orquestador.Grafo;
+            ActualizarCombosParadas();
+            panelMapa.Invalidate();
+        }
+
         public void ConectarDatos(GrafoTransporte grafoTransporte)
         {
             grafo = grafoTransporte ?? throw new ArgumentNullException(nameof(grafoTransporte));
@@ -499,7 +518,15 @@ namespace TransporteUrbanoEDD.UI.Controles
             tipoRecorridoActivo = string.Empty;
 
             // Ejecución de Dijkstra parametrizado
-            rutaActiva = grafo.CalcularDijkstra(codOrigen, codDestino, porTiempo);
+            // Ejecución a través del orquestador (Hash -> Union-Find -> Dijkstra) o directamente en el grafo
+            if (orquestador != null)
+            {
+                rutaActiva = orquestador.BuscarRutaOptima(codOrigen, codDestino, porTiempo);
+            }
+            else
+            {
+                rutaActiva = grafo.CalcularDijkstra(codOrigen, codDestino, porTiempo);
+            }
 
             if (rutaActiva.ExisteRuta)
             {
@@ -587,7 +614,21 @@ namespace TransporteUrbanoEDD.UI.Controles
 
             try
             {
-                grafo.AgregarRuta(codO, codD, tiempo, costo, dobleVia);
+                if (orquestador != null)
+                {
+                    string? error = orquestador.Cargador.RegistrarRuta(codO, codD, tiempo, costo, dobleVia);
+                    if (error != null)
+                    {
+                        MessageBox.Show(error, "Aviso al registrar ruta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+                else
+                {
+                    grafo.AgregarRuta(codO, codD, tiempo, costo, dobleVia);
+                }
+
+                RutaRegistrada?.Invoke(this, EventArgs.Empty);
                 MessageBox.Show($"Ruta registrada exitosamente:\n{codO} {(dobleVia ? "<--->" : "--->")} {codD}\nTiempo: {tiempo:F1}m | Costo: Q{costo:F2}",
                                 "Ruta Añadida", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 panelMapa.Invalidate();

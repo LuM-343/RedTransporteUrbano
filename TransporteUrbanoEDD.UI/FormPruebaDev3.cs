@@ -41,7 +41,7 @@ namespace TransporteUrbanoEDD.UI
 
         private void CargarDatosDePrueba()
         {
-            GrafoTransporte grafo = new GrafoTransporte();
+            OrquestadorTransporte orquestador = new OrquestadorTransporte();
 
             // Paradas con coordenadas distribuidas armónicamente en el lienzo
             Parada p1 = new Parada("PAR-01", "Estación Central El Trébol", 120, 280);
@@ -52,29 +52,29 @@ namespace TransporteUrbanoEDD.UI
             Parada p6 = new Parada("PAR-06", "Univ. del Valle / Landívar", 740, 460);
             Parada p7 = new Parada("PAR-07", "Estación Aislada San Cristóbal", 90, 520);
 
-            grafo.AgregarParada(p1);
-            grafo.AgregarParada(p2);
-            grafo.AgregarParada(p3);
-            grafo.AgregarParada(p4);
-            grafo.AgregarParada(p5);
-            grafo.AgregarParada(p6);
-            grafo.AgregarParada(p7);
+            orquestador.Cargador.RegistrarParada(p1);
+            orquestador.Cargador.RegistrarParada(p2);
+            orquestador.Cargador.RegistrarParada(p3);
+            orquestador.Cargador.RegistrarParada(p4);
+            orquestador.Cargador.RegistrarParada(p5);
+            orquestador.Cargador.RegistrarParada(p6);
+            orquestador.Cargador.RegistrarParada(p7);
 
             // Rutas viales con doble ponderación (Tiempo en min, Costo en Q)
             // Vía A: Más económica (Q5.50 vs Q7.00), pero más lenta (27 min vs 23 min)
-            grafo.AgregarRuta("PAR-01", "PAR-02", tiempo: 12.0, costo: 2.50, esBidireccional: true);
-            grafo.AgregarRuta("PAR-02", "PAR-03", tiempo: 15.0, costo: 3.00, esBidireccional: true);
+            orquestador.Cargador.RegistrarRuta("PAR-01", "PAR-02", tiempo: 12.0, costo: 2.50, bidireccional: true);
+            orquestador.Cargador.RegistrarRuta("PAR-02", "PAR-03", tiempo: 15.0, costo: 3.00, bidireccional: true);
 
             // Vía B: Más rápida (23 min vs 27 min), pero más cara (Q7.00 vs Q5.50)
-            grafo.AgregarRuta("PAR-01", "PAR-04", tiempo: 8.0, costo: 2.00, esBidireccional: false);
-            grafo.AgregarRuta("PAR-04", "PAR-05", tiempo: 5.0, costo: 1.50, esBidireccional: false);
-            grafo.AgregarRuta("PAR-05", "PAR-03", tiempo: 10.0, costo: 3.50, esBidireccional: false);
+            orquestador.Cargador.RegistrarRuta("PAR-01", "PAR-04", tiempo: 8.0, costo: 2.00, bidireccional: false);
+            orquestador.Cargador.RegistrarRuta("PAR-04", "PAR-05", tiempo: 5.0, costo: 1.50, bidireccional: false);
+            orquestador.Cargador.RegistrarRuta("PAR-05", "PAR-03", tiempo: 10.0, costo: 3.50, bidireccional: false);
 
             // Conexión hacia la universidad (sentido único)
-            grafo.AgregarRuta("PAR-03", "PAR-06", tiempo: 20.0, costo: 4.00, esBidireccional: false);
+            orquestador.Cargador.RegistrarRuta("PAR-03", "PAR-06", tiempo: 20.0, costo: 4.00, bidireccional: false);
 
             // Conectar estructura al control visual
-            vistaControl.ConectarDatos(grafo);
+            vistaControl.ConectarDatos(orquestador);
         }
     }
 }

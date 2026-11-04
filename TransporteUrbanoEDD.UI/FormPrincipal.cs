@@ -24,7 +24,7 @@ namespace TransporteUrbanoEDD.UI
             ConfigurarVentana();
             CargarDatasetInicial();
             ConstruirPestanas();
-            CrearBarraEstado();   // Después de las pestañas para que quede abajof
+            CrearBarraEstado();   // Después de las pestañas para que quede abajo
             ConectarPestanas();
         }
 
@@ -105,13 +105,20 @@ namespace TransporteUrbanoEDD.UI
         {
             vistaParadas.ConectarDatos(orquestador.TablaHash, orquestador.UnionFind, orquestador.Cargador);
             vistaBuscador.ConectarDatos(orquestador);
-            vistaRutas.ConectarDatos(orquestador.Grafo);
+            vistaRutas.ConectarDatos(orquestador);
 
             // Si cambian las paradas en la Pestaña 1, se refrescan el buscador y el mapa
             vistaParadas.DatosModificados += (s, e) =>
             {
                 vistaBuscador.Refrescar();
-                vistaRutas.ConectarDatos(orquestador.Grafo);
+                vistaRutas.ConectarDatos(orquestador);
+                ActualizarBarraEstado();
+            };
+
+            // Si se registra una ruta en la Pestaña 3, se actualiza la barra de estado y la Pestaña 1
+            vistaRutas.RutaRegistrada += (s, e) =>
+            {
+                vistaParadas.ConectarDatos(orquestador.TablaHash, orquestador.UnionFind, orquestador.Cargador);
                 ActualizarBarraEstado();
             };
 
