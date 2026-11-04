@@ -50,6 +50,54 @@ public class TrieParadas
         actual.CodigoParada = codigo;
     }
 
+    public void Eliminar(string nombreParada)
+    {
+        if (string.IsNullOrEmpty(nombreParada)) return;
+        EliminarRecursivo(raiz, nombreParada.ToLower(), 0);
+    }
+
+    private bool EliminarRecursivo(NodoTrie nodo, string palabraNormalizada, int index)
+    {
+        if (index == palabraNormalizada.Length)
+        {
+            if (!nodo.EsFinDePalabra) return false;
+
+            nodo.EsFinDePalabra = false;
+            nodo.NombreOriginal = string.Empty;
+            nodo.CodigoParada = string.Empty;
+
+            // Retorna true si no tiene hijos para que el padre lo borre
+            // Reemplaza .Count con la propiedad equivalente en tu ListaPropia
+            return nodo.Hijos.Count == 0; 
+        }
+
+        char c = palabraNormalizada[index];
+        ParHijoTrie? parHijo = null;
+
+        // Buscar el nodo hijo correspondiente
+        foreach (var hijo in nodo.Hijos)
+        {
+            if (hijo.Caracter == c)
+            {
+                parHijo = hijo;
+                break;
+            }
+        }
+
+        if (parHijo == null) return false; // La palabra no existe
+
+        bool debeEliminarHijo = EliminarRecursivo(parHijo.Nodo, palabraNormalizada, index + 1);
+
+        if (debeEliminarHijo)
+        {
+            // Reemplaza .Eliminar con el método equivalente en tu ListaPropia
+            nodo.Hijos.Eliminar(parHijo); 
+            
+            return !nodo.EsFinDePalabra && nodo.Hijos.Count == 0;
+        }
+
+        return false;
+    }
     public ListaPropia<string> Autocompletar(string prefijo)
     {
         ListaPropia<string> resultados = new ListaPropia<string>();

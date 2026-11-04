@@ -72,24 +72,48 @@ namespace TransporteUrbanoEDD.UI.Controles
 
             lblCoincidencias = new Label { Location = new Point(12, 60), Size = new Size(336, 20), Font = new Font("Segoe UI", 8.5F) };
 
-            lstSugerencias = new ListBox { Location = new Point(12, 84), Size = new Size(336, 140), Font = new Font("Segoe UI", 9F) };
+            lstSugerencias = new ListBox { Location = new Point(12, 84), Size = new Size(336, 110), Font = new Font("Segoe UI", 9F) };
             lstSugerencias.SelectedIndexChanged += (s, e) => MostrarDetalle();
 
-            Button btnOrigen = EstiloUI.CrearBoton("Usar como origen", EstiloUI.Azul, 12, 232, 166);
-            Button btnDestino = EstiloUI.CrearBoton("Usar como destino", EstiloUI.Rojo, 182, 232, 166);
+            // Botones de origen, destino y eliminar
+            Button btnOrigen = EstiloUI.CrearBoton("Usar como origen", EstiloUI.Azul, 12, 204, 166);
+            Button btnDestino = EstiloUI.CrearBoton("Usar como destino", EstiloUI.Rojo, 182, 204, 166);
+            Button btnEliminar = EstiloUI.CrearBoton("Eliminar del Trie", Color.DarkOrange, 12, 240, 336);
+
             btnOrigen.Click += (s, e) => ElegirParada(esOrigen: true);
             btnDestino.Click += (s, e) => ElegirParada(esOrigen: false);
+            btnEliminar.Click += (s, e) => EliminarParadaDelTrie();
 
-            lblDetalle = new Label { Location = new Point(12, 274), Size = new Size(336, 50), Font = new Font("Segoe UI", 8.5F) };
+            lblDetalle = new Label { Location = new Point(12, 280), Size = new Size(336, 44), Font = new Font("Segoe UI", 8.5F) };
 
             gb.Controls.AddRange(new Control[]
             {
                 EstiloUI.CrearEtiqueta("Escribe:", 12, 28), txtBuscar,
-                lblCoincidencias, lstSugerencias, btnOrigen, btnDestino, lblDetalle
+                lblCoincidencias, lstSugerencias, btnOrigen, btnDestino, btnEliminar, lblDetalle
             });
             return gb;
         }
 
+        private void EliminarParadaDelTrie()
+        {
+            if (orquestador == null) return;
+
+            Parada? p = ParadaSeleccionada();
+            if (p == null)
+            {
+                EstiloUI.MostrarMensaje(lblDetalle, "Primero elige una parada de la lista para eliminar.", false);
+                return;
+            }
+
+            // Elimina la parada específicamente del Trie (basado en el nombre)
+            orquestador.Trie.Eliminar(p.Nombre);
+            
+            // Actualiza visualmente el resultado
+            EstiloUI.MostrarMensaje(lblDetalle, $"'{p.Nombre}' eliminada del Trie.", true);
+            
+            // Refresca la lista de sugerencias para que desaparezca
+            ActualizarSugerencias(); 
+        }
         // Sección 2: origen y destino elegidos, criterio y botón calcular
         private GroupBox CrearSeccionRuta()
         {
