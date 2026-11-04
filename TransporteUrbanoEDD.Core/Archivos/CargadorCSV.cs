@@ -115,21 +115,28 @@ namespace TransporteUrbanoEDD.Core.Archivos
         }
 
         /// <summary>
-        /// Elimina una parada de la Tabla Hash y del Grafo (con sus rutas) y reconstruye el Union-Find.
-        /// Falta quitarla del Trie cuando tenga Eliminar (Integrante 2).
+        /// Elimina una parada de las 4 estructuras: Tabla Hash, Grafo (con sus rutas),
+        /// Union-Find (se reconstruye) y Trie (deja de aparecer en el autocompletado).
         /// Devuelve null si tuvo éxito, o el mensaje de error.
         /// </summary>
         public string? EliminarParada(string codigo)
         {
-            if (!tablaHash.Eliminar(codigo))
+            // 1. Buscarla primero: el Trie necesita su nombre, no su código
+            Parada? parada = tablaHash.Buscar(codigo);
+            if (parada == null)
                 return $"La parada '{codigo}' no existe";
 
-            // Baja del vértice y purga de aristas en el grafo (Integrante 3)
+            // 2. Tabla Hash
+            tablaHash.Eliminar(codigo);
+
+            // 3. Grafo: baja del vértice y de sus rutas de entrada y salida (Integrante 3)
             grafo.EliminarParada(codigo);
-            // Reconstrucción del Union-Find para mantener zonas actualizadas
+
+            // 4. Union-Find: se reconstruye porque no puede "separar" zonas
             unionFind.Reconstruir(grafo.CantidadParadas, grafo.ObtenerTodasLasRutas(), grafo.ObtenerTodasLasParadas());
-            // y cuando el Trie tenga Eliminar (Integrante 2):
-            //   trie?.Eliminar(nombre);
+
+            // 5. Trie: deja de sugerirse en el autocompletado (Integrante 2)
+            trie?.Eliminar(parada.Nombre);
 
             return null; // Éxito
         }
