@@ -499,3 +499,13 @@ Console.WriteLine($"  ¿Tabla Hash contiene PAR-02?: {orq.TablaHash.Contiene("PA
 Console.WriteLine($"  ¿Grafo contiene PAR-02?: {orq.Grafo.ExisteParada("PAR-02")}");
 ResultadoRuta rPostElim = orq.BuscarRutaOptima("PAR-01", "PAR-16", true);
 Console.WriteLine($"  Ruta alternada PAR-01 -> PAR-16 post-eliminación PAR-02: {rPostElim.ResumenCamino} (Tiempo: {rPostElim.TiempoTotalMinutos:F1} min)");
+
+// --- Eliminar parada: el conteo de zonas no debe cambiar ---
+Console.WriteLine("\n>>> PRUEBA DE ELIMINAR PARADA");
+OrquestadorTransporte orqE = new OrquestadorTransporte();
+orqE.Cargador.CargarParadasCSV(Path.Combine(AppContext.BaseDirectory, "Datos", "paradas.csv"));
+orqE.Cargador.CargarRutasCSV(Path.Combine(AppContext.BaseDirectory, "Datos", "rutas.csv"));
+Console.WriteLine($"  Zonas antes: {orqE.UnionFind.CantidadZonas}");                         // 2
+Console.WriteLine($"  Eliminar PAR-05: {orqE.Cargador.EliminarParada("PAR-05") ?? "OK"}");    // OK
+Console.WriteLine($"  Zonas después: {orqE.UnionFind.CantidadZonas}");                        // 2 (antes del arreglo daba 3)
+Console.WriteLine($"  ¿PAR-04 y PAR-06 misma zona? {orqE.UnionFind.EstanEnMismaZona("PAR-04", "PAR-06")}"); // True
