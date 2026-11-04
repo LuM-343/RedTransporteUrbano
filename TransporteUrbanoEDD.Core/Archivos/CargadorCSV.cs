@@ -115,7 +115,8 @@ namespace TransporteUrbanoEDD.Core.Archivos
         }
 
         /// <summary>
-        /// Elimina una parada. Por ahora solo de la Tabla Hash: el Orquestador ya la trata como inexistente.
+        /// Elimina una parada de la Tabla Hash y del Grafo (con sus rutas) y reconstruye el Union-Find.
+        /// Falta quitarla del Trie cuando tenga Eliminar (Integrante 2).
         /// Devuelve null si tuvo éxito, o el mensaje de error.
         /// </summary>
         public string? EliminarParada(string codigo)
@@ -126,7 +127,7 @@ namespace TransporteUrbanoEDD.Core.Archivos
             // Baja del vértice y purga de aristas en el grafo (Integrante 3)
             grafo.EliminarParada(codigo);
             // Reconstrucción del Union-Find para mantener zonas actualizadas
-            unionFind.Reconstruir(grafo.CantidadParadas, grafo.ObtenerTodasLasRutas());
+            unionFind.Reconstruir(grafo.CantidadParadas, grafo.ObtenerTodasLasRutas(), grafo.ObtenerTodasLasParadas());
             // y cuando el Trie tenga Eliminar (Integrante 2):
             //   trie?.Eliminar(nombre);
 

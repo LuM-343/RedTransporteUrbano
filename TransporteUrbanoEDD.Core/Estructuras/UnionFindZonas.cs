@@ -3,6 +3,7 @@
 // Conjuntos disjuntos (Union-Find) para zonas conectadas.
 // Dos paradas están en la misma zona si existe una cadena de
 // rutas que las une. Find con compresión de caminos y
+// Union por rango: O(α(n)) amortizado (prácticamente constante).
 // ============================================================
 
 using TransporteUrbanoEDD.Core.Modelos;
@@ -163,7 +164,9 @@ namespace TransporteUrbanoEDD.Core.Estructuras
         /// Necesario porque Union-Find no puede "separar" zonas al borrar una ruta o parada.
         /// O(n + m·α(n)), n = paradas, m = rutas.
         /// </summary>
-        public void Reconstruir(int cantidadElementos, ListaPropia<AristaRuta> rutas)
+        /// <param name="paradasActivas">Paradas que siguen existiendo; las posiciones eliminadas no cuentan como zona.</param>
+        public void Reconstruir(int cantidadElementos, ListaPropia<AristaRuta> rutas,
+                                ListaPropia<Parada>? paradasActivas = null)
         {
             // 1. Asegurar espacio suficiente
             while (padre.Length < cantidadElementos)
@@ -181,6 +184,16 @@ namespace TransporteUrbanoEDD.Core.Estructuras
             // 3. Volver a unir según las rutas existentes (usa el Indice de cada parada)
             foreach (AristaRuta ruta in rutas)
                 Union(ruta.Origen.Indice, ruta.Destino.Indice);
+
+            // 4. Si hay posiciones de paradas eliminadas, solo cuentan las zonas de paradas activas
+            if (paradasActivas != null)
+            {
+                int zonas = 0;
+                foreach (Parada p in paradasActivas)
+                    if (Find(p.Indice) == p.Indice) // Es raíz: representa una zona
+                        zonas++;
+                CantidadZonas = zonas;
+            }
         }
 
         // ---------------------------------------------------------
