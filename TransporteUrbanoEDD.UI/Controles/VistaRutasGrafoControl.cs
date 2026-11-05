@@ -30,7 +30,7 @@ namespace TransporteUrbanoEDD.UI.Controles
         public event EventHandler? RutaRegistrada;
 
         // Controles de interfaz (Panel Izquierdo)
-        private Panel panelLateral = null!;
+        private FlowLayoutPanel panelLateral = null!;
         private ComboBox cboOrigen = null!;
         private ComboBox cboDestino = null!;
         private RadioButton rbTiempo = null!;
@@ -93,13 +93,15 @@ namespace TransporteUrbanoEDD.UI.Controles
             Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
 
             // 1. Panel Lateral de Controles (Izquierda)
-            panelLateral = new Panel
+            panelLateral = new FlowLayoutPanel
             {
                 Dock = DockStyle.Left,
-                Width = 380,
+                Width = 320,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
                 AutoScroll = true,
                 BackColor = Color.FromArgb(248, 250, 252),
-                Padding = new Padding(12)
+                Padding = new Padding(10, 10, 10, 15)
             };
 
             // 2. Panel Derecho (Lienzo del Mapa con Doble Búfer)
@@ -246,10 +248,10 @@ namespace TransporteUrbanoEDD.UI.Controles
         {
             Panel pnlHeader = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 60,
+                Width = 282,
+                Height = 64, // Altura estándar igual que Pestañas 1 y 2
                 BackColor = Color.FromArgb(30, 41, 59),
-                Padding = new Padding(10)
+                Margin = new Padding(0)
             };
 
             Label lblTitulo = new Label
@@ -257,8 +259,8 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Text = "Red Vial y Rutas Óptimas",
                 Font = new Font("Segoe UI", 12F, FontStyle.Bold),
                 ForeColor = Color.White,
-                Dock = DockStyle.Top,
-                Height = 24
+                Location = new Point(10, 10), // Posición Y = 10 con AutoSize
+                AutoSize = true
             };
 
             Label lblSubtitulo = new Label
@@ -266,12 +268,12 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Text = "Dijkstra (Tiempo/Costo), BFS, DFS y Visualización",
                 Font = new Font("Segoe UI", 8.25F, FontStyle.Regular),
                 ForeColor = Color.FromArgb(203, 213, 225),
-                Dock = DockStyle.Bottom,
-                Height = 18
+                Location = new Point(10, 36), // Posición Y = 36 para separación clara
+                AutoSize = true
             };
 
-            pnlHeader.Controls.Add(lblSubtitulo);
             pnlHeader.Controls.Add(lblTitulo);
+            pnlHeader.Controls.Add(lblSubtitulo);
             panelLateral.Controls.Add(pnlHeader);
         }
 
@@ -280,34 +282,35 @@ namespace TransporteUrbanoEDD.UI.Controles
             GroupBox gb = new GroupBox
             {
                 Text = " 1. Calculadora de Rutas (Dijkstra) ",
-                Dock = DockStyle.Top,
+                Width = 282,
                 Height = 280,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                Margin = new Padding(0, 10, 0, 0) // Margen vertical de 10px desde el banner
             };
 
-            Label lblOrig = new Label { Text = "Parada Origen:", Top = 25, Left = 12, Width = 100, Font = new Font("Segoe UI", 8.5F) };
-            cboOrigen = new ComboBox { Top = 22, Left = 115, Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9F) };
+            Label lblOrig = new Label { Text = "Origen:", Top = 25, Left = 10, AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            cboOrigen = new ComboBox { Top = 22, Left = 65, Width = 205, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9F) };
             cboOrigen.SelectedIndexChanged += (s, e) => panelMapa.Invalidate();
 
-            Label lblDest = new Label { Text = "Parada Destino:", Top = 55, Left = 12, Width = 100, Font = new Font("Segoe UI", 8.5F) };
-            cboDestino = new ComboBox { Top = 52, Left = 115, Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9F) };
+            Label lblDest = new Label { Text = "Destino:", Top = 55, Left = 10, AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            cboDestino = new ComboBox { Top = 52, Left = 65, Width = 205, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9F) };
             cboDestino.SelectedIndexChanged += (s, e) => panelMapa.Invalidate();
 
             // Criterio de optimización: Al cambiar, se invalida el mapa para actualizar las etiquetas de peso activas
-            rbTiempo = new RadioButton { Text = "Menor Tiempo (min)", Top = 85, Left = 15, Width = 160, Checked = true, Font = new Font("Segoe UI", 8.5F) };
+            rbTiempo = new RadioButton { Text = "Menor Tiempo (min)", Top = 85, Left = 10, Width = 135, Checked = true, Font = new Font("Segoe UI", 8F) };
             rbTiempo.CheckedChanged += (s, e) => panelMapa.Invalidate();
 
-            rbCosto = new RadioButton { Text = "Menor Costo (Q)", Top = 85, Left = 180, Width = 150, Font = new Font("Segoe UI", 8.5F) };
+            rbCosto = new RadioButton { Text = "Menor Costo (Q)", Top = 85, Left = 148, Width = 125, Font = new Font("Segoe UI", 8F) };
             rbCosto.CheckedChanged += (s, e) => panelMapa.Invalidate();
 
             btnCalcularDijkstra = new Button
             {
                 Text = "Calcular Ruta Óptima",
                 Top = 115,
-                Left = 12,
-                Width = 333,
+                Left = 10,
+                Width = 260,
                 Height = 32,
                 BackColor = Color.FromArgb(37, 99, 235),
                 ForeColor = Color.White,
@@ -322,8 +325,8 @@ namespace TransporteUrbanoEDD.UI.Controles
             Panel pnlResultados = new Panel
             {
                 Top = 155,
-                Left = 12,
-                Width = 333,
+                Left = 10,
+                Width = 260,
                 Height = 110,
                 BackColor = Color.FromArgb(241, 245, 249),
                 BorderStyle = BorderStyle.FixedSingle,
@@ -335,7 +338,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Text = "Seleccione origen, destino y presione Calcular.",
                 Top = 4,
                 Left = 6,
-                Width = 320,
+                Width = 248,
                 Height = 18,
                 ForeColor = Color.FromArgb(71, 85, 105),
                 Font = new Font("Segoe UI", 8F, FontStyle.Italic)
@@ -346,7 +349,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Text = "Camino: -",
                 Top = 24,
                 Left = 6,
-                Width = 320,
+                Width = 248,
                 Height = 36,
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(30, 41, 59)
@@ -357,7 +360,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Text = "Tiempo: -",
                 Top = 64,
                 Left = 6,
-                Width = 150,
+                Width = 120,
                 Height = 20,
                 ForeColor = Color.FromArgb(15, 23, 42),
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold)
@@ -367,8 +370,8 @@ namespace TransporteUrbanoEDD.UI.Controles
             {
                 Text = "Costo: -",
                 Top = 64,
-                Left = 165,
-                Width = 150,
+                Left = 130,
+                Width = 120,
                 Height = 20,
                 ForeColor = Color.FromArgb(15, 23, 42),
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold)
@@ -389,7 +392,6 @@ namespace TransporteUrbanoEDD.UI.Controles
             gb.Controls.Add(pnlResultados);
 
             panelLateral.Controls.Add(gb);
-            gb.BringToFront();
         }
 
         private void ConstruirSeccionRecorridos()
@@ -397,44 +399,45 @@ namespace TransporteUrbanoEDD.UI.Controles
             GroupBox gb = new GroupBox
             {
                 Text = " 2. Recorridos de la Red (BFS / DFS) ",
-                Dock = DockStyle.Top,
+                Width = 282,
                 Height = 190,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                Margin = new Padding(0, 10, 0, 0)
             };
 
-            Label lblInicio = new Label { Text = "Parada Inicio:", Top = 24, Left = 12, Width = 100, Font = new Font("Segoe UI", 8.5F) };
-            cboInicioRecorrido = new ComboBox { Top = 21, Left = 115, Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9F) };
+            Label lblInicio = new Label { Text = "Inicio:", Top = 24, Left = 10, AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            cboInicioRecorrido = new ComboBox { Top = 21, Left = 55, Width = 215, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9F) };
 
             btnBFS = new Button
             {
-                Text = "Recorrido BFS (Anchura)",
+                Text = "Recorrido BFS",
                 Top = 55,
-                Left = 12,
-                Width = 160,
+                Left = 10,
+                Width = 126,
                 Height = 30,
                 BackColor = Color.FromArgb(13, 148, 136),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 8.25F, FontStyle.Bold)
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold)
             };
             btnBFS.FlatAppearance.BorderSize = 0;
             btnBFS.Click += BtnBFS_Click;
 
             btnDFS = new Button
             {
-                Text = "Recorrido DFS (Profundidad)",
+                Text = "Recorrido DFS",
                 Top = 55,
-                Left = 185,
-                Width = 160,
+                Left = 144,
+                Width = 126,
                 Height = 30,
                 BackColor = Color.FromArgb(147, 51, 234),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 8.25F, FontStyle.Bold)
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold)
             };
             btnDFS.FlatAppearance.BorderSize = 0;
             btnDFS.Click += BtnDFS_Click;
@@ -442,8 +445,8 @@ namespace TransporteUrbanoEDD.UI.Controles
             txtResultadoRecorrido = new TextBox
             {
                 Top = 95,
-                Left = 12,
-                Width = 333,
+                Left = 10,
+                Width = 260,
                 Height = 80,
                 Multiline = true,
                 ReadOnly = true,
@@ -460,7 +463,6 @@ namespace TransporteUrbanoEDD.UI.Controles
             gb.Controls.Add(txtResultadoRecorrido);
 
             panelLateral.Controls.Add(gb);
-            gb.BringToFront();
         }
 
         private void ConstruirSeccionAgregarRuta()
@@ -468,33 +470,39 @@ namespace TransporteUrbanoEDD.UI.Controles
             GroupBox gb = new GroupBox
             {
                 Text = " 3. Agregar Nueva Conexión Vial ",
-                Dock = DockStyle.Top,
-                Height = 175,
+                Width = 282,
+                Height = 195,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Color.FromArgb(15, 23, 42),
-                Padding = new Padding(10)
+                Padding = new Padding(10),
+                Margin = new Padding(0, 10, 0, 0)
             };
 
-            Label lblO = new Label { Text = "De:", Top = 25, Left = 12, Width = 30, Font = new Font("Segoe UI", 8.5F) };
-            cboNuevaOrigen = new ComboBox { Top = 22, Left = 45, Width = 125, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 8.5F) };
+            // Fila 1 completa: Origen "De:" y su ComboBox
+            Label lblO = new Label { Text = "De:", Top = 25, Left = 10, AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            cboNuevaOrigen = new ComboBox { Top = 22, Left = 38, Width = 232, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 8.5F) };
 
-            Label lblD = new Label { Text = "A:", Top = 25, Left = 180, Width = 25, Font = new Font("Segoe UI", 8.5F) };
-            cboNuevaDestino = new ComboBox { Top = 22, Left = 205, Width = 140, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 8.5F) };
+            // Fila 2 completa: Destino "A:" y su ComboBox
+            Label lblD = new Label { Text = "A:", Top = 55, Left = 10, AutoSize = true, Font = new Font("Segoe UI", 8.5F) };
+            cboNuevaDestino = new ComboBox { Top = 52, Left = 38, Width = 232, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 8.5F) };
 
-            Label lblT = new Label { Text = "Tiempo (min):", Top = 58, Left = 12, Width = 85, Font = new Font("Segoe UI", 8.5F) };
-            numTiempo = new NumericUpDown { Top = 55, Left = 100, Width = 70, Minimum = 1, Maximum = 300, Value = 10, DecimalPlaces = 1 };
+            // Fila 3: Controles Tiempo y Costo con ancho de 65px bien alineados dentro del GroupBox
+            Label lblT = new Label { Text = "Tiempo (min):", Top = 87, Left = 10, AutoSize = true, Font = new Font("Segoe UI", 8.25F) };
+            numTiempo = new NumericUpDown { Top = 84, Left = 86, Width = 65, Minimum = 1, Maximum = 300, Value = 10, DecimalPlaces = 1 };
 
-            Label lblC = new Label { Text = "Costo (Q):", Top = 58, Left = 185, Width = 65, Font = new Font("Segoe UI", 8.5F) };
-            numCosto = new NumericUpDown { Top = 55, Left = 255, Width = 90, Minimum = 0, Maximum = 100, Value = 3, DecimalPlaces = 2 };
+            Label lblC = new Label { Text = "Costo (Q):", Top = 87, Left = 158, AutoSize = true, Font = new Font("Segoe UI", 8.25F) };
+            numCosto = new NumericUpDown { Top = 84, Left = 212, Width = 65, Minimum = 0, Maximum = 100, Value = 3, DecimalPlaces = 2 };
 
-            chkDobleVia = new CheckBox { Text = "Vía de doble sentido (Bidireccional)", Top = 90, Left = 15, Width = 260, Checked = true, Font = new Font("Segoe UI", 8.5F) };
+            // Fila 4: CheckBox de doble vía
+            chkDobleVia = new CheckBox { Text = "Vía de doble sentido (Bidireccional)", Top = 118, Left = 10, Width = 260, Checked = true, Font = new Font("Segoe UI", 8F) };
 
+            // Fila 5: Botón de registro
             btnAgregarRuta = new Button
             {
                 Text = "Registrar Conexión Vial",
-                Top = 122,
-                Left = 12,
-                Width = 333,
+                Top = 148,
+                Left = 10,
+                Width = 260,
                 Height = 32,
                 BackColor = Color.FromArgb(22, 163, 74),
                 ForeColor = Color.White,
@@ -517,36 +525,24 @@ namespace TransporteUrbanoEDD.UI.Controles
             gb.Controls.Add(btnAgregarRuta);
 
             panelLateral.Controls.Add(gb);
-            gb.BringToFront();
         }
 
         private void ConstruirSeccionAcciones()
         {
             Panel pnlAcciones = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 82,
-                Padding = new Padding(12, 6, 12, 6)
+                Width = 282,
+                Height = 88,
+                Padding = new Padding(0),
+                Margin = new Padding(0, 10, 0, 15) // Margen inferior de 15px para evitar cortes al scrollear
             };
-
-            Button btnCentrarLateral = new Button
-            {
-                Text = "🎯 Centrar Mapa (Restablecer Zoom)",
-                Dock = DockStyle.Top,
-                Height = 32,
-                BackColor = Color.FromArgb(241, 245, 249),
-                ForeColor = Color.FromArgb(30, 41, 59),
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
-            };
-            btnCentrarLateral.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
-            btnCentrarLateral.Click += (s, e) => CentrarMapa();
 
             btnLimpiarMapa = new Button
             {
                 Text = "Limpiar Resaltado del Mapa",
-                Dock = DockStyle.Bottom,
+                Top = 4,
+                Left = 10,
+                Width = 260,
                 Height = 32,
                 BackColor = Color.FromArgb(100, 116, 139),
                 ForeColor = Color.White,
@@ -557,10 +553,25 @@ namespace TransporteUrbanoEDD.UI.Controles
             btnLimpiarMapa.FlatAppearance.BorderSize = 0;
             btnLimpiarMapa.Click += BtnLimpiarMapa_Click;
 
-            pnlAcciones.Controls.Add(btnCentrarLateral);
+            Button btnCentrarLateral = new Button
+            {
+                Text = "🎯 Centrar Mapa (Restablecer Zoom)",
+                Top = 44,
+                Left = 10,
+                Width = 260,
+                Height = 36, // Altura completa de 36px según especificación
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
+            };
+            btnCentrarLateral.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnCentrarLateral.Click += (s, e) => CentrarMapa();
+
             pnlAcciones.Controls.Add(btnLimpiarMapa);
+            pnlAcciones.Controls.Add(btnCentrarLateral);
             panelLateral.Controls.Add(pnlAcciones);
-            pnlAcciones.BringToFront();
         }
 
         #endregion
