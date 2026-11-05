@@ -11,7 +11,8 @@ namespace TransporteUrbanoEDD.UI.Controles
     /// <summary>
     /// Control de usuario independiente para el Módulo de Calculadora de Rutas,
     /// Recorridos en Grafos (BFS/DFS) y Visualización de Mapa Vial interactivo.
-    /// Desarrollado por Dev 3 cumpliendo estrictamente con la regla de no usar colecciones prohibidas.
+    /// Desarrollado cumpliendo estrictamente con la regla de no usar colecciones prohibidas
+    /// (sin List, Dictionary, HashSet, Stack ni LINQ).
     /// </summary>
     public class VistaRutasGrafoControl : UserControl
     {
@@ -54,11 +55,29 @@ namespace TransporteUrbanoEDD.UI.Controles
         private CheckBox chkDobleVia = null!;
         private Button btnAgregarRuta = null!;
 
-        // Botón de Limpieza
+        // Botón de Limpieza y Acciones
         private Button btnLimpiarMapa = null!;
 
         // Lienzo del Mapa (Panel Derecho)
         private PanelDobleBuffer panelMapa = null!;
+
+        // Interactividad: Zoom, Panorámica (Pan) y Hover
+        private float zoom = 1.0f;
+        private float panX = 0f;
+        private float panY = 0f;
+        private bool isDragging = false;
+        private bool hasMovedSignificantly = false;
+        private Point dragStartPoint;
+        private Point lastMousePos;
+        private Parada? paradaHover = null;
+
+        // Barra de herramientas flotante del mapa (Esquina Superior)
+        private Panel pnlToolbarMapa = null!;
+        private CheckBox chkMostrarPesos = null!;
+        private Button btnCentrarMapa = null!;
+        private Button btnZoomOut = null!;
+        private Button btnZoomIn = null!;
+        private Label lblZoomIndicador = null!;
 
         public VistaRutasGrafoControl()
         {
@@ -83,15 +102,25 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Padding = new Padding(12)
             };
 
-            // 2. Panel Derecho (Lienzo del Mapa)
+            // 2. Panel Derecho (Lienzo del Mapa con Doble Búfer)
             panelMapa = new PanelDobleBuffer
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(255, 255, 255),
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Default
             };
             panelMapa.Paint += PanelMapa_Paint;
             panelMapa.MouseClick += PanelMapa_MouseClick;
+            panelMapa.MouseDoubleClick += PanelMapa_MouseDoubleClick;
+            panelMapa.MouseDown += PanelMapa_MouseDown;
+            panelMapa.MouseMove += PanelMapa_MouseMove;
+            panelMapa.MouseUp += PanelMapa_MouseUp;
+            panelMapa.MouseWheel += PanelMapa_MouseWheel;
+            panelMapa.MouseEnter += (s, e) => panelMapa.Focus();
+            panelMapa.MouseLeave += PanelMapa_MouseLeave;
+
+            // Barra flotante de herramientas del mapa (esquina superior)
+            ConstruirBarraHerramientasMapa();
 
             // Construcción modular de las secciones del panel lateral
             ConstruirEncabezado();
@@ -104,6 +133,113 @@ namespace TransporteUrbanoEDD.UI.Controles
             Controls.Add(panelLateral);
 
             ResumeLayout(false);
+        }
+
+        private void ConstruirBarraHerramientasMapa()
+        {
+            pnlToolbarMapa = new Panel
+            {
+                Location = new Point(12, 12),
+                Height = 36,
+                Width = 430,
+                BackColor = Color.FromArgb(245, 255, 255, 255),
+                BorderStyle = BorderStyle.FixedSingle,
+                Padding = new Padding(6, 4, 6, 4)
+            };
+
+            // CheckBox para mostrar u ocultar pesos en las vías
+            chkMostrarPesos = new CheckBox
+            {
+                Text = "Mostrar pesos en vías",
+                Checked = true,
+                Top = 7,
+                Left = 10,
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8.25F, FontStyle.Regular),
+                ForeColor = Color.FromArgb(15, 23, 42),
+                Cursor = Cursors.Hand
+            };
+            chkMostrarPesos.CheckedChanged += (s, e) => panelMapa.Invalidate();
+
+            Label lblSep = new Label
+            {
+                Text = "|",
+                Top = 7,
+                Left = 168,
+                Width = 10,
+                Height = 20,
+                ForeColor = Color.FromArgb(203, 213, 225)
+            };
+
+            btnCentrarMapa = new Button
+            {
+                Text = "🎯 Centrar Mapa",
+                Top = 4,
+                Left = 184,
+                Width = 100,
+                Height = 26,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCentrarMapa.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnCentrarMapa.Click += (s, e) => CentrarMapa();
+
+            btnZoomOut = new Button
+            {
+                Text = "－",
+                Top = 4,
+                Left = 292,
+                Width = 28,
+                Height = 26,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnZoomOut.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnZoomOut.Click += (s, e) => AplicarZoomCentrado(1f / 1.2f);
+
+            lblZoomIndicador = new Label
+            {
+                Text = "100%",
+                Top = 8,
+                Left = 324,
+                Width = 46,
+                Height = 20,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold),
+                ForeColor = Color.FromArgb(71, 85, 105)
+            };
+
+            btnZoomIn = new Button
+            {
+                Text = "＋",
+                Top = 4,
+                Left = 374,
+                Width = 28,
+                Height = 26,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnZoomIn.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnZoomIn.Click += (s, e) => AplicarZoomCentrado(1.2f);
+
+            pnlToolbarMapa.Controls.Add(chkMostrarPesos);
+            pnlToolbarMapa.Controls.Add(lblSep);
+            pnlToolbarMapa.Controls.Add(btnCentrarMapa);
+            pnlToolbarMapa.Controls.Add(btnZoomOut);
+            pnlToolbarMapa.Controls.Add(lblZoomIndicador);
+            pnlToolbarMapa.Controls.Add(btnZoomIn);
+
+            panelMapa.Controls.Add(pnlToolbarMapa);
+            pnlToolbarMapa.BringToFront();
         }
 
         private void ConstruirEncabezado()
@@ -159,9 +295,12 @@ namespace TransporteUrbanoEDD.UI.Controles
             cboDestino = new ComboBox { Top = 52, Left = 115, Width = 230, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9F) };
             cboDestino.SelectedIndexChanged += (s, e) => panelMapa.Invalidate();
 
-            // Criterio de optimización
+            // Criterio de optimización: Al cambiar, se invalida el mapa para actualizar las etiquetas de peso activas
             rbTiempo = new RadioButton { Text = "Menor Tiempo (min)", Top = 85, Left = 15, Width = 160, Checked = true, Font = new Font("Segoe UI", 8.5F) };
+            rbTiempo.CheckedChanged += (s, e) => panelMapa.Invalidate();
+
             rbCosto = new RadioButton { Text = "Menor Costo (Q)", Top = 85, Left = 180, Width = 150, Font = new Font("Segoe UI", 8.5F) };
+            rbCosto.CheckedChanged += (s, e) => panelMapa.Invalidate();
 
             btnCalcularDijkstra = new Button
             {
@@ -386,23 +525,39 @@ namespace TransporteUrbanoEDD.UI.Controles
             Panel pnlAcciones = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 65,
-                Padding = new Padding(12, 10, 12, 10)
+                Height = 82,
+                Padding = new Padding(12, 6, 12, 6)
             };
+
+            Button btnCentrarLateral = new Button
+            {
+                Text = "🎯 Centrar Mapa (Restablecer Zoom)",
+                Dock = DockStyle.Top,
+                Height = 32,
+                BackColor = Color.FromArgb(241, 245, 249),
+                ForeColor = Color.FromArgb(30, 41, 59),
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
+            };
+            btnCentrarLateral.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnCentrarLateral.Click += (s, e) => CentrarMapa();
 
             btnLimpiarMapa = new Button
             {
                 Text = "Limpiar Resaltado del Mapa",
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Bottom,
+                Height = 32,
                 BackColor = Color.FromArgb(100, 116, 139),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold)
             };
             btnLimpiarMapa.FlatAppearance.BorderSize = 0;
             btnLimpiarMapa.Click += BtnLimpiarMapa_Click;
 
+            pnlAcciones.Controls.Add(btnCentrarLateral);
             pnlAcciones.Controls.Add(btnLimpiarMapa);
             panelLateral.Controls.Add(pnlAcciones);
             pnlAcciones.BringToFront();
@@ -413,11 +568,7 @@ namespace TransporteUrbanoEDD.UI.Controles
         #region Enlace de Datos (ConectarDatos)
 
         /// <summary>
-        /// Conecta la estructura del GrafoTransporte con el control visual y actualiza los componentes.
-        /// </summary>
-        /// <summary>
         /// Conecta el Orquestador central con el control visual y actualiza los componentes.
-        /// Permite calcular rutas con orquestador.BuscarRutaOptima y registrar rutas con orquestador.Cargador.RegistrarRuta.
         /// </summary>
         public void ConectarDatos(OrquestadorTransporte orquestadorTransporte)
         {
@@ -436,7 +587,6 @@ namespace TransporteUrbanoEDD.UI.Controles
 
         /// <summary>
         /// Sobrecarga flexible para permitir la conexión de datos proveniente de OrquestadorTransporte
-        /// o integración directa de los módulos de Dev 1 y Dev 2.
         /// </summary>
         public void ConectarDatos(GrafoTransporte grafoTransporte, object? tablaHashParadas, object? unionFindZonas = null)
         {
@@ -518,7 +668,6 @@ namespace TransporteUrbanoEDD.UI.Controles
             tipoRecorridoActivo = string.Empty;
 
             // Ejecución de Dijkstra parametrizado
-            // Ejecución a través del orquestador (Hash -> Union-Find -> Dijkstra) o directamente en el grafo
             if (orquestador != null)
             {
                 rutaActiva = orquestador.BuscarRutaOptima(codOrigen, codDestino, porTiempo);
@@ -653,18 +802,6 @@ namespace TransporteUrbanoEDD.UI.Controles
             panelMapa.Invalidate();
         }
 
-        private void PanelMapa_MouseClick(object? sender, MouseEventArgs e)
-        {
-            if (grafo == null) return;
-
-            Parada? seleccionada = BuscarParadaPorCoordenadas(e.X, e.Y, 24);
-            if (seleccionada == null) return;
-
-            // Seleccionar intuitivamente en los combos al hacer clic en el mapa
-            SeleccionarEnCombo(cboOrigen, seleccionada.Codigo);
-            panelMapa.Invalidate();
-        }
-
         private void SeleccionarEnCombo(ComboBox cbo, string codigo)
         {
             for (int i = 0; i < cbo.Items.Count; i++)
@@ -677,16 +814,19 @@ namespace TransporteUrbanoEDD.UI.Controles
             }
         }
 
-        private Parada? BuscarParadaPorCoordenadas(int x, int y, double radioTolerancia)
+        /// <summary>
+        /// Búsqueda de parada bajo coordenadas en espacio del grafo sin colecciones prohibidas ni LINQ.
+        /// </summary>
+        private Parada? BuscarParadaPorCoordenadas(float x, float y, float radioTolerancia)
         {
             if (grafo == null) return null;
 
+            float rad2 = radioTolerancia * radioTolerancia;
             foreach (Parada p in grafo.ObtenerTodasLasParadas())
             {
-                double dx = p.X - x;
-                double dy = p.Y - y;
-                double dist = Math.Sqrt(dx * dx + dy * dy);
-                if (dist <= radioTolerancia)
+                float dx = (float)p.X - x;
+                float dy = (float)p.Y - y;
+                if ((dx * dx + dy * dy) <= rad2)
                 {
                     return p;
                 }
@@ -696,27 +836,198 @@ namespace TransporteUrbanoEDD.UI.Controles
 
         #endregion
 
+        #region Interactividad (Zoom, Pan y Hover)
+
+        /// <summary>
+        /// Restablece el zoom y posición de la cámara del mapa a su estado original.
+        /// </summary>
+        public void CentrarMapa()
+        {
+            zoom = 1.0f;
+            panX = 0f;
+            panY = 0f;
+            paradaHover = null;
+            ActualizarIndicadorZoom();
+            panelMapa.Invalidate();
+        }
+
+        private void ActualizarIndicadorZoom()
+        {
+            if (lblZoomIndicador != null)
+            {
+                lblZoomIndicador.Text = $"{(int)Math.Round(zoom * 100)}%";
+            }
+        }
+
+        private void AplicarZoomCentrado(float factor)
+        {
+            float oldZoom = zoom;
+            float newZoom = Math.Max(0.4f, Math.Min(3.5f, zoom * factor));
+            if (Math.Abs(newZoom - oldZoom) < 0.001f) return;
+
+            float centerX = panelMapa.Width / 2f;
+            float centerY = panelMapa.Height / 2f;
+
+            panX = centerX - (centerX - panX) * (newZoom / oldZoom);
+            panY = centerY - (centerY - panY) * (newZoom / oldZoom);
+            zoom = newZoom;
+
+            ActualizarIndicadorZoom();
+            panelMapa.Invalidate();
+        }
+
+        private void PanelMapa_MouseWheel(object? sender, MouseEventArgs e)
+        {
+            float oldZoom = zoom;
+            float factor = e.Delta > 0 ? 1.15f : (1f / 1.15f);
+            float newZoom = Math.Max(0.4f, Math.Min(3.5f, zoom * factor));
+            if (Math.Abs(newZoom - oldZoom) < 0.001f) return;
+
+            // Mantener fijo el punto del mundo bajo el cursor del ratón
+            float mouseX = e.X;
+            float mouseY = e.Y;
+
+            panX = mouseX - (mouseX - panX) * (newZoom / oldZoom);
+            panY = mouseY - (mouseY - panY) * (newZoom / oldZoom);
+            zoom = newZoom;
+
+            ActualizarIndicadorZoom();
+            panelMapa.Invalidate();
+        }
+
+        private void PanelMapa_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left || e.Button == MouseButtons.Right)
+            {
+                isDragging = true;
+                hasMovedSignificantly = false;
+                dragStartPoint = e.Location;
+                lastMousePos = e.Location;
+            }
+        }
+
+        private void PanelMapa_MouseMove(object? sender, MouseEventArgs e)
+        {
+            if (isDragging)
+            {
+                int dx = e.X - lastMousePos.X;
+                int dy = e.Y - lastMousePos.Y;
+
+                if (Math.Abs(e.X - dragStartPoint.X) > 4 || Math.Abs(e.Y - dragStartPoint.Y) > 4)
+                {
+                    hasMovedSignificantly = true;
+                }
+
+                panX += dx;
+                panY += dy;
+                lastMousePos = e.Location;
+                panelMapa.Cursor = Cursors.SizeAll;
+                panelMapa.Invalidate();
+            }
+            else
+            {
+                // Detección de Hover en coordenadas de mundo
+                float mundoX = (e.X - panX) / zoom;
+                float mundoY = (e.Y - panY) / zoom;
+                Parada? encontrada = BuscarParadaPorCoordenadas(mundoX, mundoY, 16f + 4f);
+
+                if (encontrada != paradaHover)
+                {
+                    paradaHover = encontrada;
+                    panelMapa.Cursor = paradaHover != null ? Cursors.Hand : Cursors.Default;
+                    panelMapa.Invalidate();
+                }
+            }
+        }
+
+        private void PanelMapa_MouseUp(object? sender, MouseEventArgs e)
+        {
+            if (isDragging)
+            {
+                isDragging = false;
+                panelMapa.Cursor = paradaHover != null ? Cursors.Hand : Cursors.Default;
+            }
+        }
+
+        private void PanelMapa_MouseLeave(object? sender, EventArgs e)
+        {
+            isDragging = false;
+            if (paradaHover != null)
+            {
+                paradaHover = null;
+                panelMapa.Invalidate();
+            }
+        }
+
+        private void PanelMapa_MouseDoubleClick(object? sender, MouseEventArgs e)
+        {
+            // Doble clic restablece el zoom y posición original
+            CentrarMapa();
+        }
+
+        private void PanelMapa_MouseClick(object? sender, MouseEventArgs e)
+        {
+            // Si el usuario estaba arrastrando para hacer pan, no seleccionar nodo
+            if (hasMovedSignificantly)
+            {
+                return;
+            }
+
+            if (grafo == null) return;
+
+            float mundoX = (e.X - panX) / zoom;
+            float mundoY = (e.Y - panY) / zoom;
+
+            Parada? seleccionada = BuscarParadaPorCoordenadas(mundoX, mundoY, 20f);
+            if (seleccionada == null) return;
+
+            // Clic izquierdo selecciona Origen; clic derecho selecciona Destino
+            if (e.Button == MouseButtons.Left)
+            {
+                SeleccionarEnCombo(cboOrigen, seleccionada.Codigo);
+            }
+            else if (e.Button == MouseButtons.Right)
+            {
+                SeleccionarEnCombo(cboDestino, seleccionada.Codigo);
+            }
+
+            panelMapa.Invalidate();
+        }
+
+        #endregion
+
         #region Motor de Renderizado del Mapa Vial (GDI+)
 
         private void PanelMapa_Paint(object? sender, PaintEventArgs e)
         {
             Graphics g = e.Graphics;
+
+            // 1. Calidad de Renderizado (Anti-Aliasing estricto)
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-
-            // Fondo con cuadrícula tenue de ingeniería
-            DibujarFondoCuadricula(g);
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
             if (grafo == null || grafo.CantidadParadas == 0)
             {
                 using Font fontAviso = new Font("Segoe UI", 12F, FontStyle.Regular);
                 using Brush brushAviso = new SolidBrush(Color.FromArgb(148, 163, 184));
-                g.DrawString("Conecte un Grafo de Transporte con paradas para visualizar el mapa.", fontAviso, brushAviso, 30, 30);
+                g.DrawString("Conecte un Grafo de Transporte con paradas para visualizar el mapa.", fontAviso, brushAviso, 30, 60);
                 return;
             }
 
             string codOrigenSel = ExtraerCodigo(cboOrigen.SelectedItem);
             string codDestinoSel = ExtraerCodigo(cboDestino.SelectedItem);
+
+            // Guardar el estado de pantalla antes de aplicar Zoom y Pan
+            GraphicsState estadoMundo = g.Save();
+
+            // Aplicar transformaciones para el grafo
+            g.TranslateTransform(panX, panY);
+            g.ScaleTransform(zoom, zoom);
+
+            // Fondo con cuadrícula tenue continua adaptada al mundo
+            DibujarFondoCuadricula(g);
 
             // 1. Dibujar todas las aristas normales (calles regulares)
             DibujarAristasRegulares(g);
@@ -727,25 +1038,35 @@ namespace TransporteUrbanoEDD.UI.Controles
             // 3. Dibujar todos los nodos (paradas de transporte)
             DibujarNodosParadas(g, codOrigenSel, codDestinoSel);
 
-            // 4. Dibujar leyenda gráfica en la esquina inferior derecha
+            // Restaurar estado a coordenadas fijas de pantalla
+            g.Restore(estadoMundo);
+
+            // 4. Dibujar leyenda gráfica fija en la esquina inferior derecha (no se mueve con el zoom)
             DibujarLeyenda(g);
         }
 
         private void DibujarFondoCuadricula(Graphics g)
         {
-            int ancho = panelMapa.Width;
-            int alto = panelMapa.Height;
+            float xMin = -panX / zoom;
+            float yMin = -panY / zoom;
+            float xMax = (panelMapa.Width - panX) / zoom;
+            float yMax = (panelMapa.Height - panY) / zoom;
 
             using Pen penGrid = new Pen(Color.FromArgb(241, 245, 249), 1f);
             int paso = 40;
 
-            for (int x = 0; x < ancho; x += paso)
+            int inicioX = (int)Math.Floor(xMin / paso) * paso;
+            int finX = (int)Math.Ceiling(xMax / paso) * paso;
+            int inicioY = (int)Math.Floor(yMin / paso) * paso;
+            int finY = (int)Math.Ceiling(yMax / paso) * paso;
+
+            for (int x = inicioX; x <= finX; x += paso)
             {
-                g.DrawLine(penGrid, x, 0, x, alto);
+                g.DrawLine(penGrid, x, yMin, x, yMax);
             }
-            for (int y = 0; y < alto; y += paso)
+            for (int y = inicioY; y <= finY; y += paso)
             {
-                g.DrawLine(penGrid, 0, y, ancho, y);
+                g.DrawLine(penGrid, xMin, y, xMax, y);
             }
         }
 
@@ -753,16 +1074,33 @@ namespace TransporteUrbanoEDD.UI.Controles
         {
             if (grafo == null) return;
 
-            using Pen penCalle = new Pen(Color.FromArgb(180, 190, 205), 2f);
+            bool hayRuta = rutaActiva != null && rutaActiva.ExisteRuta;
+            bool hayRecorrido = recorridoActivo != null && recorridoActivo.Count > 0;
+            bool spotlightActivo = hayRuta || hayRecorrido;
+            bool mostrarPesos = chkMostrarPesos.Checked;
+            bool porTiempo = rbTiempo.Checked;
+
+            using Pen penCalleNormal = new Pen(Color.FromArgb(180, 190, 205), 2f);
+            using Pen penCalleDimmed = new Pen(Color.FromArgb(60, 175, 185, 200), 1.2f);
             using Font fontPeso = new Font("Segoe UI", 7.5F, FontStyle.Regular);
-            using Brush brushTexto = new SolidBrush(Color.FromArgb(71, 85, 105));
-            using Brush brushFondoPill = new SolidBrush(Color.FromArgb(245, 255, 255, 255));
-            using Pen penBordePill = new Pen(Color.FromArgb(226, 232, 240), 1f);
+            using Brush brushTextoNormal = new SolidBrush(Color.FromArgb(71, 85, 105));
+            using Brush brushTextoDimmed = new SolidBrush(Color.FromArgb(90, 140, 150, 165));
+            using Brush brushFondoNormal = new SolidBrush(Color.FromArgb(235, 255, 255, 255));
+            using Brush brushFondoDimmed = new SolidBrush(Color.FromArgb(120, 255, 255, 255));
+            using Pen penBordeNormal = new Pen(Color.FromArgb(226, 232, 240), 0.8f);
 
             foreach (AristaRuta ruta in grafo.ObtenerTodasLasRutas())
             {
-                // Si la arista pertenece a la ruta óptima, la dibujamos en la capa superior
-                if (EsAristaDeRutaGanadora(ruta.Origen.Codigo, ruta.Destino.Codigo))
+                // 1. Si la arista en este sentido forma parte de la ruta ganadora de Dijkstra, se dibuja en la capa superior
+                if (hayRuta && EsAristaDeRutaGanadora(ruta.Origen.Codigo, ruta.Destino.Codigo))
+                    continue;
+
+                // 2. Si es bidireccional y el sentido inverso es la ruta ganadora, tampoco la dibujamos como regular gris
+                if (hayRuta && ruta.EsBidireccional && EsAristaDeRutaGanadora(ruta.Destino.Codigo, ruta.Origen.Codigo))
+                    continue;
+
+                // 3. Para calles bidireccionales regulares, evitar dibujar la arista dos veces (evita saturación y parpadeo)
+                if (ruta.EsBidireccional && string.Compare(ruta.Origen.Codigo, ruta.Destino.Codigo, StringComparison.Ordinal) > 0)
                     continue;
 
                 float x1 = (float)ruta.Origen.X;
@@ -770,25 +1108,46 @@ namespace TransporteUrbanoEDD.UI.Controles
                 float x2 = (float)ruta.Destino.X;
                 float y2 = (float)ruta.Destino.Y;
 
-                // Línea de la calle
-                g.DrawLine(penCalle, x1, y1, x2, y2);
+                // Determinar si esta arista pertenece al recorrido activo BFS/DFS
+                bool perteneceResultado = hayRecorrido &&
+                                          EsParadaEnRecorridoActivo(ruta.Origen.Codigo) &&
+                                          EsParadaEnRecorridoActivo(ruta.Destino.Codigo);
+
+                bool atenuar = spotlightActivo && !perteneceResultado;
+
+                // Dibujar línea de la calle
+                Pen penUsar = atenuar ? penCalleDimmed : penCalleNormal;
+                g.DrawLine(penUsar, x1, y1, x2, y2);
 
                 // Flecha direccional si es de un solo sentido
                 if (!ruta.EsBidireccional)
                 {
-                    DibujarFlechaDireccion(g, x1, y1, x2, y2, Color.FromArgb(148, 163, 184));
+                    Color colorFlecha = atenuar ? Color.FromArgb(60, 175, 185, 200) : Color.FromArgb(148, 163, 184);
+                    DibujarFlechaDireccion(g, x1, y1, x2, y2, colorFlecha, atenuar ? 1.5f : 2f);
                 }
 
-                // Etiqueta de peso en el punto medio (Tiempo y Costo)
-                float mx = (x1 + x2) / 2f;
-                float my = (y1 + y2) / 2f;
-                string etiqueta = $"{ruta.Tiempo:0.#}m | Q{ruta.Costo:0.00}";
-                SizeF size = g.MeasureString(etiqueta, fontPeso);
+                // Si el usuario tiene activo "Mostrar pesos en vías"
+                if (mostrarPesos)
+                {
+                    float mx = (x1 + x2) / 2f;
+                    float my = (y1 + y2) / 2f;
 
-                RectangleF rectPill = new RectangleF(mx - (size.Width / 2f) - 3, my - (size.Height / 2f) - 2, size.Width + 6, size.Height + 4);
-                g.FillRoundedRectangle(brushFondoPill, rectPill, 4);
-                g.DrawRoundedRectangle(penBordePill, rectPill, 4);
-                g.DrawString(etiqueta, fontPeso, brushTexto, rectPill.X + 3, rectPill.Y + 2);
+                    // Descongestión: Muestra ÚNICAMENTE el peso del criterio activo según el RadioButton seleccionado
+                    string etiqueta = porTiempo ? $"{ruta.Tiempo:0.#}m" : $"Q{ruta.Costo:0.00}";
+                    SizeF size = g.MeasureString(etiqueta, fontPeso);
+
+                    RectangleF rectPill = new RectangleF(mx - (size.Width / 2f) - 3, my - (size.Height / 2f) - 1.5f, size.Width + 6, size.Height + 3);
+
+                    Brush brushFondo = atenuar ? brushFondoDimmed : brushFondoNormal;
+                    Brush brushTexto = atenuar ? brushTextoDimmed : brushTextoNormal;
+
+                    g.FillRoundedRectangle(brushFondo, rectPill, 3);
+                    if (!atenuar)
+                    {
+                        g.DrawRoundedRectangle(penBordeNormal, rectPill, 3);
+                    }
+                    g.DrawString(etiqueta, fontPeso, brushTexto, rectPill.X + 3, rectPill.Y + 1.5f);
+                }
             }
         }
 
@@ -797,15 +1156,24 @@ namespace TransporteUrbanoEDD.UI.Controles
             if (grafo == null || rutaActiva == null || !rutaActiva.ExisteRuta)
                 return;
 
-            using Pen penGanadora = new Pen(Color.FromArgb(22, 163, 74), 4.5f)
+            // Halo sutil exterior para destacar el camino de inmediato (grosor 8f, verde/menta translúcido)
+            using Pen penHalo = new Pen(Color.FromArgb(75, 74, 222, 128), 8f)
             {
                 StartCap = LineCap.Round,
                 EndCap = LineCap.Round
             };
+
+            // Arista ganadora con 100% opacidad y grosor 3.5f según especificación estricta
+            using Pen penGanadora = new Pen(Color.FromArgb(22, 163, 74), 3.5f)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round
+            };
+
             using Font fontGanadora = new Font("Segoe UI", 8F, FontStyle.Bold);
             using Brush brushTextoG = new SolidBrush(Color.FromArgb(20, 83, 45));
-            using Brush brushFondoG = new SolidBrush(Color.FromArgb(220, 252, 231));
-            using Pen penBordeG = new Pen(Color.FromArgb(74, 222, 128), 1.5f);
+            using Brush brushFondoG = new SolidBrush(Color.FromArgb(245, 255, 255, 255));
+            using Pen penBordeG = new Pen(Color.FromArgb(34, 197, 94), 1.5f);
 
             foreach (AristaRuta ruta in grafo.ObtenerTodasLasRutas())
             {
@@ -816,20 +1184,25 @@ namespace TransporteUrbanoEDD.UI.Controles
                     float x2 = (float)ruta.Destino.X;
                     float y2 = (float)ruta.Destino.Y;
 
-                    // Dibujar tramo resaltado con grosor 4.5f
-                    g.DrawLine(penGanadora, x1, y1, x2, y2);
-                    DibujarFlechaDireccion(g, x1, y1, x2, y2, Color.FromArgb(21, 128, 61), grosor: 3f);
+                    // 1. Halo sutil
+                    g.DrawLine(penHalo, x1, y1, x2, y2);
 
-                    // Etiqueta destacada
+                    // 2. Línea principal de 3.5f de grosor
+                    g.DrawLine(penGanadora, x1, y1, x2, y2);
+
+                    // 3. Flecha direccional en el sentido de la ruta ganadora
+                    DibujarFlechaDireccion(g, x1, y1, x2, y2, Color.FromArgb(21, 128, 61), grosor: 2.5f);
+
+                    // 4. Etiqueta destacada en la ruta óptima con borde verde resaltado
                     float mx = (x1 + x2) / 2f;
                     float my = (y1 + y2) / 2f;
                     string etiqueta = $"{ruta.Tiempo:0.#} min | Q{ruta.Costo:0.00}";
                     SizeF size = g.MeasureString(etiqueta, fontGanadora);
 
-                    RectangleF rectPill = new RectangleF(mx - (size.Width / 2f) - 4, my - (size.Height / 2f) - 3, size.Width + 8, size.Height + 6);
-                    g.FillRoundedRectangle(brushFondoG, rectPill, 5);
-                    g.DrawRoundedRectangle(penBordeG, rectPill, 5);
-                    g.DrawString(etiqueta, fontGanadora, brushTextoG, rectPill.X + 4, rectPill.Y + 3);
+                    RectangleF rectPill = new RectangleF(mx - (size.Width / 2f) - 4, my - (size.Height / 2f) - 2.5f, size.Width + 8, size.Height + 5);
+                    g.FillRoundedRectangle(brushFondoG, rectPill, 4);
+                    g.DrawRoundedRectangle(penBordeG, rectPill, 4);
+                    g.DrawString(etiqueta, fontGanadora, brushTextoG, rectPill.X + 4, rectPill.Y + 2.5f);
                 }
             }
         }
@@ -838,42 +1211,69 @@ namespace TransporteUrbanoEDD.UI.Controles
         {
             if (grafo == null) return;
 
-            float radio = 18f;
-            using Font fontCodigo = new Font("Segoe UI", 8F, FontStyle.Bold);
-            using Font fontNombre = new Font("Segoe UI", 8F, FontStyle.Regular);
+            bool hayRuta = rutaActiva != null && rutaActiva.ExisteRuta;
+            bool hayRecorrido = recorridoActivo != null && recorridoActivo.Count > 0;
+            bool spotlightActivo = hayRuta || hayRecorrido;
+
+            // Radio de los círculos reducido a 16px según especificación
+            float radioNormal = 16f;
+            using Font fontCodigo = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            using Font fontNombre = new Font("Segoe UI", 7.5F, FontStyle.Regular);
             using Brush brushTextoBlanco = new SolidBrush(Color.White);
-            using Brush brushTextoNombre = new SolidBrush(Color.FromArgb(15, 23, 42));
-            using Brush brushFondoNombre = new SolidBrush(Color.FromArgb(235, 255, 255, 255));
-            using Pen penBordeNombre = new Pen(Color.FromArgb(203, 213, 225), 1f);
+            using Brush brushTextoDimmed = new SolidBrush(Color.FromArgb(170, 255, 255, 255));
+            using Brush brushNombreNormal = new SolidBrush(Color.FromArgb(15, 23, 42));
+            using Brush brushNombreDimmed = new SolidBrush(Color.FromArgb(90, 100, 116, 139));
+            using Brush brushFondoPill = new SolidBrush(Color.FromArgb(230, 255, 255, 255)); // Semitransparente según regla
+            using Brush brushFondoPillDimmed = new SolidBrush(Color.FromArgb(120, 255, 255, 255));
+            using Pen penBordePill = new Pen(Color.FromArgb(203, 213, 225), 0.8f);
+            using Pen penBordePillDimmed = new Pen(Color.FromArgb(60, 203, 213, 225), 0.8f);
+            using Brush brushSombraPill = new SolidBrush(Color.FromArgb(25, 0, 0, 0));
 
             foreach (Parada p in grafo.ObtenerTodasLasParadas())
             {
                 float cx = (float)p.X;
                 float cy = (float)p.Y;
+
+                bool esOrigen = string.Equals(p.Codigo, codOrigenSel, StringComparison.OrdinalIgnoreCase);
+                bool esDestino = string.Equals(p.Codigo, codDestinoSel, StringComparison.OrdinalIgnoreCase);
+                bool enRutaGanadora = EsParadaEnRutaGanadora(p.Codigo);
+                bool enRecorrido = EsParadaEnRecorridoActivo(p.Codigo);
+                bool esHover = paradaHover != null && string.Equals(p.Codigo, paradaHover.Codigo, StringComparison.OrdinalIgnoreCase);
+
+                bool perteneceResultado = enRutaGanadora || enRecorrido || esOrigen || esDestino;
+                bool atenuar = spotlightActivo && !perteneceResultado;
+
+                float radio = esHover ? radioNormal + 2f : radioNormal;
                 RectangleF rectNodo = new RectangleF(cx - radio, cy - radio, radio * 2, radio * 2);
 
                 Color colorNodo;
                 Color colorBorde;
 
-                if (string.Equals(p.Codigo, codOrigenSel, StringComparison.OrdinalIgnoreCase))
+                if (atenuar)
+                {
+                    // Spotlight: Baja opacidad para nodos fuera del camino
+                    colorNodo = Color.FromArgb(70, 148, 163, 184);
+                    colorBorde = Color.FromArgb(80, 100, 116, 139);
+                }
+                else if (esOrigen)
                 {
                     // Nodo Origen (Azul)
                     colorNodo = Color.FromArgb(37, 99, 235);
                     colorBorde = Color.FromArgb(30, 58, 138);
                 }
-                else if (string.Equals(p.Codigo, codDestinoSel, StringComparison.OrdinalIgnoreCase))
+                else if (esDestino)
                 {
                     // Nodo Destino (Rojo)
                     colorNodo = Color.FromArgb(220, 38, 38);
                     colorBorde = Color.FromArgb(153, 27, 27);
                 }
-                else if (EsParadaEnRutaGanadora(p.Codigo))
+                else if (enRutaGanadora)
                 {
                     // Nodo en ruta ganadora de Dijkstra (Verde)
                     colorNodo = Color.FromArgb(22, 163, 74);
                     colorBorde = Color.FromArgb(20, 83, 45);
                 }
-                else if (EsParadaEnRecorridoActivo(p.Codigo))
+                else if (enRecorrido)
                 {
                     // Nodo en recorrido BFS/DFS (Ámbar)
                     colorNodo = Color.FromArgb(217, 119, 6);
@@ -881,20 +1281,28 @@ namespace TransporteUrbanoEDD.UI.Controles
                 }
                 else
                 {
-                    // Nodo estándar (Gris Pizarra Oscuro)
+                    // Nodo estándar (Gris Pizarra)
                     colorNodo = Color.FromArgb(71, 85, 105);
                     colorBorde = Color.FromArgb(30, 41, 59);
                 }
 
-                // Sombra suave del nodo
-                using (Brush brushSombra = new SolidBrush(Color.FromArgb(40, 0, 0, 0)))
+                // Halo sutil en hover
+                if (esHover)
                 {
-                    g.FillEllipse(brushSombra, cx - radio + 2, cy - radio + 2, radio * 2, radio * 2);
+                    using Pen penHover = new Pen(Color.FromArgb(180, 59, 130, 246), 2.5f);
+                    g.DrawEllipse(penHover, cx - radio - 4, cy - radio - 4, (radio + 4) * 2, (radio + 4) * 2);
+                }
+
+                // Sombra suave del nodo
+                if (!atenuar)
+                {
+                    using Brush brushSombra = new SolidBrush(Color.FromArgb(40, 0, 0, 0));
+                    g.FillEllipse(brushSombra, cx - radio + 1.5f, cy - radio + 1.5f, radio * 2, radio * 2);
                 }
 
                 // Relleno y borde del círculo del nodo
                 using (Brush brushNodo = new SolidBrush(colorNodo))
-                using (Pen penBorde = new Pen(colorBorde, 2.5f))
+                using (Pen penBorde = new Pen(colorBorde, atenuar ? 1.5f : 2.5f))
                 {
                     g.FillEllipse(brushNodo, rectNodo);
                     g.DrawEllipse(penBorde, rectNodo);
@@ -902,26 +1310,38 @@ namespace TransporteUrbanoEDD.UI.Controles
 
                 // Código en el centro del nodo
                 SizeF sizeCod = g.MeasureString(p.Codigo, fontCodigo);
-                g.DrawString(p.Codigo, fontCodigo, brushTextoBlanco, cx - (sizeCod.Width / 2f), cy - (sizeCod.Height / 2f));
+                Brush brushTextoC = atenuar ? brushTextoDimmed : brushTextoBlanco;
+                g.DrawString(p.Codigo, fontCodigo, brushTextoC, cx - (sizeCod.Width / 2f), cy - (sizeCod.Height / 2f));
 
-                // Nombre de la parada debajo del nodo con placa blanca
+                // Píldora compacta con sombra suave semitransparente debajo del nodo para el nombre
                 SizeF sizeNom = g.MeasureString(p.Nombre, fontNombre);
-                RectangleF rectNom = new RectangleF(cx - (sizeNom.Width / 2f) - 3, cy + radio + 3, sizeNom.Width + 6, sizeNom.Height + 2);
-                g.FillRoundedRectangle(brushFondoNombre, rectNom, 3);
-                g.DrawRoundedRectangle(penBordeNombre, rectNom, 3);
-                g.DrawString(p.Nombre, fontNombre, brushTextoNombre, rectNom.X + 3, rectNom.Y + 1);
+                float pillY = cy + radio + 3.5f;
+                RectangleF rectNom = new RectangleF(cx - (sizeNom.Width / 2f) - 4, pillY, sizeNom.Width + 8, sizeNom.Height + 2.5f);
+
+                if (!atenuar)
+                {
+                    g.FillRoundedRectangle(brushSombraPill, new RectangleF(rectNom.X + 1, rectNom.Y + 1, rectNom.Width, rectNom.Height), 3);
+                }
+
+                Brush brushPill = atenuar ? brushFondoPillDimmed : brushFondoPill;
+                Pen penPill = atenuar ? penBordePillDimmed : penBordePill;
+                Brush brushTextoN = atenuar ? brushNombreDimmed : brushNombreNormal;
+
+                g.FillRoundedRectangle(brushPill, rectNom, 3);
+                g.DrawRoundedRectangle(penPill, rectNom, 3);
+                g.DrawString(p.Nombre, fontNombre, brushTextoN, rectNom.X + 4, rectNom.Y + 1f);
             }
         }
 
         private void DibujarFlechaDireccion(Graphics g, float x1, float y1, float x2, float y2, Color colorFlecha, float grosor = 2f)
         {
-            // Calcula punto medio avanzado hacia el destino (65% del trayecto)
+            // Calcula punto medio avanzado hacia el destino (65% del trayecto para no tapar los nombres)
             float t = 0.65f;
             float px = x1 + (x2 - x1) * t;
             float py = y1 + (y2 - y1) * t;
 
             float angulo = (float)Math.Atan2(y2 - y1, x2 - x1);
-            float tamaño = 8f;
+            float tamaño = 8.5f;
 
             PointF pCentro = new PointF(px, py);
             PointF pIzq = new PointF(px - tamaño * (float)Math.Cos(angulo - Math.PI / 6),
@@ -932,8 +1352,10 @@ namespace TransporteUrbanoEDD.UI.Controles
             using Brush brushF = new SolidBrush(colorFlecha);
             using Pen penF = new Pen(colorFlecha, grosor);
 
-            g.DrawLine(penF, pCentro, pIzq);
-            g.DrawLine(penF, pCentro, pDer);
+            // Cabeza de flecha sólida y nítida
+            PointF[] puntosFlecha = new PointF[] { pCentro, pIzq, pDer };
+            g.FillPolygon(brushF, puntosFlecha);
+            g.DrawPolygon(penF, puntosFlecha);
         }
 
         private void DibujarLeyenda(Graphics g)
@@ -941,15 +1363,15 @@ namespace TransporteUrbanoEDD.UI.Controles
             int anchoLienzo = panelMapa.Width;
             int altoLienzo = panelMapa.Height;
 
-            int anchoLeyenda = 190;
-            int altoLeyenda = 120;
+            int anchoLeyenda = 200;
+            int altoLeyenda = 135;
             int x = anchoLienzo - anchoLeyenda - 15;
             int y = altoLienzo - altoLeyenda - 15;
 
             if (x < 10 || y < 10) return;
 
             Rectangle rectBox = new Rectangle(x, y, anchoLeyenda, altoLeyenda);
-            using Brush brushFondo = new SolidBrush(Color.FromArgb(235, 255, 255, 255));
+            using Brush brushFondo = new SolidBrush(Color.FromArgb(240, 255, 255, 255));
             using Pen penBorde = new Pen(Color.FromArgb(203, 213, 225), 1.5f);
             using Font fontT = new Font("Segoe UI", 8F, FontStyle.Bold);
             using Font fontItem = new Font("Segoe UI", 7.5F, FontStyle.Regular);
@@ -960,10 +1382,11 @@ namespace TransporteUrbanoEDD.UI.Controles
 
             g.DrawString("Leyenda del Mapa", fontT, brushT, x + 8, y + 6);
 
-            DibujarItemLeyenda(g, x + 8, y + 26, Color.FromArgb(37, 99, 235), "Parada Origen", fontItem, brushT);
-            DibujarItemLeyenda(g, x + 8, y + 46, Color.FromArgb(220, 38, 38), "Parada Destino", fontItem, brushT);
-            DibujarItemLeyenda(g, x + 8, y + 66, Color.FromArgb(22, 163, 74), "Ruta Óptima (Dijkstra)", fontItem, brushT);
-            DibujarItemLeyenda(g, x + 8, y + 86, Color.FromArgb(217, 119, 6), "Visitada en Recorrido", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 25, Color.FromArgb(37, 99, 235), "Parada Origen", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 45, Color.FromArgb(220, 38, 38), "Parada Destino", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 65, Color.FromArgb(22, 163, 74), "Ruta Óptima (Dijkstra)", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 85, Color.FromArgb(217, 119, 6), "Visitada en Recorrido", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 105, Color.FromArgb(71, 85, 105), "Parada Estándar", fontItem, brushT);
         }
 
         private void DibujarItemLeyenda(Graphics g, int x, int y, Color color, string texto, Font font, Brush brushTexto)
