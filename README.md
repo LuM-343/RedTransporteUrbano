@@ -95,4 +95,4 @@ La red tiene **2 zonas conectadas**: la principal (27 paradas) y una zona rural 
 | Ruta óptima (Dijkstra) | `PAR-01` → `PAR-16` por tiempo | PAR-01 → 02 → 12 → 14 → 16, 29.1 min |
 | Conectividad (Union-Find) | `PAR-01` y `PAR-20` | Zonas distintas |
 
-El listado completo de 25 consultas (5 por opción) con sus resultados esperados está en el manual técnico.
+El listado completo de 25 consultas (5 por opción) con sus resultados esperados está en el manual técnico que se encuentra en la carpeta de Manuales y Diagramas
