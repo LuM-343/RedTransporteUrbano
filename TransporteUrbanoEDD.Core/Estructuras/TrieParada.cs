@@ -38,7 +38,6 @@ public class TrieParadas
             NodoTrie? hijo = actual.ObtenerHijo(c);
             if (hijo == null)
             {
-                // Inicializar propiedades required en nodos intermedios
                 hijo = new NodoTrie { NombreOriginal = string.Empty, CodigoParada = string.Empty };
                 actual.Hijos.Agregar(new ParHijoTrie { Caracter = c, Nodo = hijo });
             }
@@ -66,8 +65,6 @@ public class TrieParadas
             nodo.NombreOriginal = string.Empty;
             nodo.CodigoParada = string.Empty;
 
-            // Retorna true si no tiene hijos para que el padre lo borre
-            // Reemplaza .Count con la propiedad equivalente en tu ListaPropia
             return nodo.Hijos.Count == 0; 
         }
 
@@ -90,7 +87,6 @@ public class TrieParadas
 
         if (debeEliminarHijo)
         {
-            // Reemplaza .Eliminar con el método equivalente en tu ListaPropia
             nodo.Hijos.Eliminar(parHijo); 
             
             return !nodo.EsFinDePalabra && nodo.Hijos.Count == 0;

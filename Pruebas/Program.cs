@@ -509,3 +509,12 @@ Console.WriteLine($"  Zonas antes: {orqE.UnionFind.CantidadZonas}");            
 Console.WriteLine($"  Eliminar PAR-05: {orqE.Cargador.EliminarParada("PAR-05") ?? "OK"}");    // OK
 Console.WriteLine($"  Zonas después: {orqE.UnionFind.CantidadZonas}");                        // 2 (antes del arreglo daba 3)
 Console.WriteLine($"  ¿PAR-04 y PAR-06 misma zona? {orqE.UnionFind.EstanEnMismaZona("PAR-04", "PAR-06")}"); // True
+
+// --- Eliminar también quita la parada del Trie ---
+Console.WriteLine("\n>>> ELIMINAR QUITA DEL TRIE");
+OrquestadorTransporte orqT = new OrquestadorTransporte();
+orqT.Cargador.CargarParadasCSV(Path.Combine(AppContext.BaseDirectory, "Datos", "paradas.csv"));
+orqT.Cargador.CargarRutasCSV(Path.Combine(AppContext.BaseDirectory, "Datos", "rutas.csv"));
+Console.WriteLine($"  'ter' antes:   {orqT.Trie.Autocompletar("ter").Count} sugerencia(s)");  // 1 (Terminal Minerva)
+orqT.Cargador.EliminarParada("PAR-05");
+Console.WriteLine($"  'ter' después: {orqT.Trie.Autocompletar("ter").Count} sugerencia(s)");  // 0
