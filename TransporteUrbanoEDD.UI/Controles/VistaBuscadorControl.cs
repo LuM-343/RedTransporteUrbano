@@ -72,13 +72,13 @@ namespace TransporteUrbanoEDD.UI.Controles
 
             lblCoincidencias = new Label { Location = new Point(12, 60), Size = new Size(336, 20), Font = new Font("Segoe UI", 8.5F) };
 
-            lstSugerencias = new ListBox { Location = new Point(12, 84), Size = new Size(336, 110), Font = new Font("Segoe UI", 9F) };
+            lstSugerencias = new ListBox { Location = new Point(12, 84), Size = new Size(336, 110), Font = new Font("Segoe UI", 9F), BackColor = EstiloUI.ConsolaFondo, ForeColor = EstiloUI.ConsolaTexto, BorderStyle = BorderStyle.FixedSingle };
             lstSugerencias.SelectedIndexChanged += (s, e) => MostrarDetalle();
 
             // Botones de origen, destino y eliminar
             Button btnOrigen = EstiloUI.CrearBoton("Usar como origen", EstiloUI.Azul, 12, 204, 166);
-            Button btnDestino = EstiloUI.CrearBoton("Usar como destino", EstiloUI.Rojo, 182, 204, 166);
-            Button btnEliminar = EstiloUI.CrearBoton("Eliminar del Trie", Color.DarkOrange, 12, 240, 336);
+            Button btnDestino = EstiloUI.CrearBoton("Usar como destino", EstiloUI.BotonSecundario, 182, 204, 166);
+            Button btnEliminar = EstiloUI.CrearBoton("Eliminar del Trie", EstiloUI.BotonDestructivo, 12, 240, 336);
 
             btnOrigen.Click += (s, e) => ElegirParada(esOrigen: true);
             btnDestino.Click += (s, e) => ElegirParada(esOrigen: false);
@@ -125,7 +125,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             rbTiempo = new RadioButton { Location = new Point(12, 80), Width = 160, Text = "Menor tiempo", Checked = true, Font = new Font("Segoe UI", 8.5F) };
             RadioButton rbCosto = new RadioButton { Location = new Point(182, 80), Width = 160, Text = "Menor costo", Font = new Font("Segoe UI", 8.5F) };
 
-            Button btnCalcular = EstiloUI.CrearBoton("Calcular ruta", EstiloUI.Verde, 12, 112, 336);
+            Button btnCalcular = EstiloUI.CrearBoton("Calcular ruta", EstiloUI.BotonPrimario, 12, 112, 336);
             btnCalcular.Click += (s, e) => CalcularRuta();
 
             lblResultado = new Label { Location = new Point(12, 152), Size = new Size(336, 42), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
@@ -142,7 +142,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             txtFlujo = new TextBox
             {
                 Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical,
-                Font = new Font("Consolas", 10F), BackColor = EstiloUI.Fondo, BorderStyle = BorderStyle.None,
+                Font = new Font("Consolas", 10F), BackColor = EstiloUI.ConsolaFondo, ForeColor = EstiloUI.ConsolaTexto, BorderStyle = BorderStyle.None,
                 Text = "Elige un origen y un destino por nombre y presiona \"Calcular ruta\"."
             };
 

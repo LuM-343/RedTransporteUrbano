@@ -17,9 +17,9 @@ namespace TransporteUrbanoEDD.UI.Controles
     public class VistaParadasControl : UserControl
     {
         // Paleta (la misma de la Pestaña 3 para que se vean parejas)
-        private static readonly Color ColorFondo = Color.FromArgb(248, 250, 252);
-        private static readonly Color ColorEncabezado = Color.FromArgb(30, 41, 59);
-        private static readonly Color ColorTexto = Color.FromArgb(15, 23, 42);
+        private static readonly Color ColorFondo = EstiloUI.Fondo;
+        private static readonly Color ColorEncabezado = EstiloUI.Encabezado;
+        private static readonly Color ColorTexto = EstiloUI.Texto;
         private static readonly Color ColorColision = Color.FromArgb(254, 243, 199); // Amarillo suave
 
         // Estructuras del Core (las crea el FormPrincipal, una sola vez)
@@ -95,7 +95,7 @@ namespace TransporteUrbanoEDD.UI.Controles
         // Franja oscura con título y subtítulo
         private Panel CrearEncabezado()
         {
-            Panel encabezado = new Panel { Width = 360, Height = 60, BackColor = ColorEncabezado };
+            Panel encabezado = new Panel { Width = 360, Height = 64, BackColor = ColorEncabezado };
 
             encabezado.Controls.Add(new Label
             {
@@ -109,8 +109,8 @@ namespace TransporteUrbanoEDD.UI.Controles
             {
                 Text = "Tabla Hash, Union-Find y carga de archivos CSV",
                 Font = new Font("Segoe UI", 8.25F),
-                ForeColor = Color.FromArgb(203, 213, 225),
-                Location = new Point(10, 34),
+                ForeColor = EstiloUI.Subtitulo,
+                Location = new Point(10, 36),
                 AutoSize = true
             });
 
@@ -128,10 +128,10 @@ namespace TransporteUrbanoEDD.UI.Controles
             numY = new NumericUpDown { Location = new Point(215, 92), Width = 90, Maximum = 2000, DecimalPlaces = 1 };
             txtZona = new TextBox { Location = new Point(80, 124), Width = 264, PlaceholderText = "Zona 1" };
 
-            Button btnAgregar = CrearBoton("Agregar", Color.FromArgb(22, 163, 74), 12, 160);
-            Button btnBuscar = CrearBoton("Buscar", Color.FromArgb(37, 99, 235), 98, 160);
-            Button btnEliminar = CrearBoton("Eliminar", Color.FromArgb(220, 38, 38), 184, 160);
-            Button btnLimpiar = CrearBoton("Limpiar", Color.FromArgb(100, 116, 139), 270, 160);
+            Button btnAgregar = CrearBoton("Agregar", EstiloUI.BotonCreacion, 12, 160);
+            Button btnBuscar = CrearBoton("Buscar", EstiloUI.BotonPrimario, 98, 160);
+            Button btnEliminar = CrearBoton("Eliminar", EstiloUI.BotonDestructivo, 184, 160);
+            Button btnLimpiar = CrearBoton("Limpiar", EstiloUI.BotonNeutro, 270, 160);
             btnAgregar.Click += BtnAgregar_Click;
             btnBuscar.Click += BtnBuscar_Click;
             btnEliminar.Click += BtnEliminar_Click;
@@ -157,10 +157,10 @@ namespace TransporteUrbanoEDD.UI.Controles
         {
             GroupBox gb = CrearSeccion(" 2. Archivos CSV ", 236);
 
-            Button btnCargarParadas = CrearBoton("Cargar paradas", Color.FromArgb(37, 99, 235), 12, 28, 166);
-            Button btnCargarRutas = CrearBoton("Cargar rutas", Color.FromArgb(37, 99, 235), 182, 28, 166);
-            Button btnGuardarParadas = CrearBoton("Guardar paradas", Color.FromArgb(100, 116, 139), 12, 66, 166);
-            Button btnGuardarRutas = CrearBoton("Guardar rutas", Color.FromArgb(100, 116, 139), 182, 66, 166);
+            Button btnCargarParadas = CrearBoton("Cargar paradas", EstiloUI.BotonPrimario, 12, 28, 166);
+            Button btnCargarRutas = CrearBoton("Cargar rutas", EstiloUI.BotonPrimario, 182, 28, 166);
+            Button btnGuardarParadas = CrearBoton("Guardar paradas", EstiloUI.BotonNeutro, 12, 66, 166);
+            Button btnGuardarRutas = CrearBoton("Guardar rutas", EstiloUI.BotonNeutro, 182, 66, 166);
             btnCargarParadas.Click += (s, e) => CargarArchivo(esParadas: true);
             btnCargarRutas.Click += (s, e) => CargarArchivo(esParadas: false);
             btnGuardarParadas.Click += (s, e) => GuardarArchivo(esParadas: true);
@@ -179,6 +179,9 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Location = new Point(12, 130),
                 Size = new Size(336, 94),
                 Font = new Font("Consolas", 8F),
+                BackColor = EstiloUI.ConsolaFondo,
+                ForeColor = EstiloUI.ConsolaTexto,
+                BorderStyle = BorderStyle.FixedSingle,
                 HorizontalScrollbar = true // Los mensajes largos se leen desplazando
             };
 
@@ -198,7 +201,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             cboZonaOrigen = CrearComboParadas(80, 28);
             cboZonaDestino = CrearComboParadas(80, 60);
 
-            Button btnVerificar = CrearBoton("Verificar conectividad", Color.FromArgb(147, 51, 234), 12, 96, 336);
+            Button btnVerificar = CrearBoton("Verificar conectividad", EstiloUI.BotonSecundario, 12, 96, 336);
             btnVerificar.Click += BtnVerificar_Click;
 
             lblResultadoZona = new Label { Location = new Point(12, 136), Size = new Size(336, 20), Font = new Font("Segoe UI", 8.5F, FontStyle.Bold) };
@@ -274,7 +277,7 @@ namespace TransporteUrbanoEDD.UI.Controles
         private static void MostrarMensaje(Label etiqueta, string texto, bool exito)
         {
             etiqueta.Text = texto;
-            etiqueta.ForeColor = exito ? Color.FromArgb(22, 163, 74) : Color.FromArgb(220, 38, 38);
+            etiqueta.ForeColor = exito ? EstiloUI.BotonCreacion : EstiloUI.BotonDestructivo;
         }
 
         // Lado derecho: título, resumen de la tabla y la grilla de buckets
@@ -309,7 +312,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             gridBuckets.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
             gridBuckets.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             gridBuckets.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-            gridBuckets.GridColor = Color.FromArgb(226, 232, 240);
+            gridBuckets.GridColor = EstiloUI.BordeSutil;
             gridBuckets.RowTemplate.Height = 28;
             gridBuckets.AlternatingRowsDefaultCellStyle.BackColor = ColorFondo;
             gridBuckets.DefaultCellStyle.SelectionBackColor = Color.FromArgb(191, 219, 254); // Azul claro

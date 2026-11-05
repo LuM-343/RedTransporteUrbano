@@ -100,7 +100,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                BackColor = Color.FromArgb(248, 250, 252),
+                BackColor = EstiloUI.Fondo,
                 Padding = new Padding(8, 10, 8, 15)
             };
 
@@ -250,7 +250,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             {
                 Width = 310,
                 Height = 64, // Altura estándar igual que Pestañas 1 y 2
-                BackColor = Color.FromArgb(30, 41, 59),
+                BackColor = EstiloUI.Encabezado,
                 Margin = new Padding(0)
             };
 
@@ -267,7 +267,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             {
                 Text = "Dijkstra (Tiempo/Costo), BFS, DFS y Visualización",
                 Font = new Font("Segoe UI", 8.25F, FontStyle.Regular),
-                ForeColor = Color.FromArgb(203, 213, 225),
+                ForeColor = EstiloUI.Subtitulo,
                 Location = new Point(12, 36), // Posición Y = 36 para separación clara
                 AutoSize = true
             };
@@ -312,7 +312,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Left = 12,
                 Width = 284,
                 Height = 32,
-                BackColor = Color.FromArgb(37, 99, 235),
+                BackColor = EstiloUI.BotonPrimario,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
@@ -328,7 +328,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Left = 12,
                 Width = 284,
                 Height = 110,
-                BackColor = Color.FromArgb(241, 245, 249),
+                BackColor = EstiloUI.ConsolaFondo,
                 BorderStyle = BorderStyle.FixedSingle,
                 Padding = new Padding(6)
             };
@@ -417,7 +417,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Left = 12,
                 Width = 138,
                 Height = 30,
-                BackColor = Color.FromArgb(13, 148, 136),
+                BackColor = EstiloUI.BotonSecundario,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
@@ -433,7 +433,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Left = 158,
                 Width = 138,
                 Height = 30,
-                BackColor = Color.FromArgb(147, 51, 234),
+                BackColor = EstiloUI.BotonSecundario,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
@@ -451,7 +451,9 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Multiline = true,
                 ReadOnly = true,
                 ScrollBars = ScrollBars.Vertical,
-                BackColor = Color.FromArgb(241, 245, 249),
+                BackColor = EstiloUI.ConsolaFondo,
+                ForeColor = EstiloUI.ConsolaTexto,
+                BorderStyle = BorderStyle.FixedSingle,
                 Font = new Font("Consolas", 8.5F),
                 Text = "Seleccione la parada inicial y ejecute un recorrido."
             };
@@ -505,7 +507,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Location = new Point(12, 168),
                 Width = 284,
                 Height = 32,
-                BackColor = Color.FromArgb(22, 163, 74),
+                BackColor = EstiloUI.BotonCreacion,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
@@ -544,7 +546,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Location = new Point(0, 4),
                 Width = 310,
                 Height = 32,
-                BackColor = Color.FromArgb(100, 116, 139),
+                BackColor = EstiloUI.BotonNeutro,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
@@ -559,13 +561,13 @@ namespace TransporteUrbanoEDD.UI.Controles
                 Location = new Point(0, 44),
                 Width = 310,
                 Height = 36, // Altura completa de 36px y texto sin cortar
-                BackColor = Color.FromArgb(241, 245, 249),
-                ForeColor = Color.FromArgb(30, 41, 59),
+                BackColor = EstiloUI.BotonNeutro,
+                ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold)
             };
-            btnCentrarLateral.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            btnCentrarLateral.FlatAppearance.BorderSize = 0;
             btnCentrarLateral.Click += (s, e) => CentrarMapa();
 
             pnlAcciones.Controls.Add(btnLimpiarMapa);
@@ -939,7 +941,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 // Detección de Hover en coordenadas de mundo
                 float mundoX = (e.X - panX) / zoom;
                 float mundoY = (e.Y - panY) / zoom;
-                Parada? encontrada = BuscarParadaPorCoordenadas(mundoX, mundoY, 16f + 4f);
+                Parada? encontrada = BuscarParadaPorCoordenadas(mundoX, mundoY, 21f + 4f);
 
                 if (encontrada != paradaHover)
                 {
@@ -988,7 +990,7 @@ namespace TransporteUrbanoEDD.UI.Controles
             float mundoX = (e.X - panX) / zoom;
             float mundoY = (e.Y - panY) / zoom;
 
-            Parada? seleccionada = BuscarParadaPorCoordenadas(mundoX, mundoY, 20f);
+            Parada? seleccionada = BuscarParadaPorCoordenadas(mundoX, mundoY, 25f);
             if (seleccionada == null) return;
 
             // Clic izquierdo selecciona Origen; clic derecho selecciona Destino
@@ -1090,8 +1092,8 @@ namespace TransporteUrbanoEDD.UI.Controles
             bool mostrarPesos = chkMostrarPesos.Checked;
             bool porTiempo = rbTiempo.Checked;
 
-            using Pen penCalleNormal = new Pen(Color.FromArgb(180, 190, 205), 2f);
-            using Pen penCalleDimmed = new Pen(Color.FromArgb(60, 175, 185, 200), 1.2f);
+            using Pen penCalleNormal = new Pen(EstiloUI.MapaAristaNormal, 2f);
+            using Pen penCalleDimmed = new Pen(Color.FromArgb(60, 148, 163, 184), 1.2f);
             using Font fontPeso = new Font("Segoe UI", 7.5F, FontStyle.Regular);
             using Brush brushTextoNormal = new SolidBrush(Color.FromArgb(71, 85, 105));
             using Brush brushTextoDimmed = new SolidBrush(Color.FromArgb(90, 140, 150, 165));
@@ -1132,7 +1134,7 @@ namespace TransporteUrbanoEDD.UI.Controles
                 // Flecha direccional si es de un solo sentido
                 if (!ruta.EsBidireccional)
                 {
-                    Color colorFlecha = atenuar ? Color.FromArgb(60, 175, 185, 200) : Color.FromArgb(148, 163, 184);
+                    Color colorFlecha = atenuar ? Color.FromArgb(60, 148, 163, 184) : EstiloUI.MapaAristaNormal;
                     DibujarFlechaDireccion(g, x1, y1, x2, y2, colorFlecha, atenuar ? 1.5f : 2f);
                 }
 
@@ -1226,8 +1228,15 @@ namespace TransporteUrbanoEDD.UI.Controles
             bool spotlightActivo = hayRuta || hayRecorrido;
 
             // Radio de los círculos reducido a 16px según especificación
-            float radioNormal = 16f;
+            // Radio de los círculos aumentado a 21px (diámetro 42px)
+            float radioNormal = 21f;
             using Font fontCodigo = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            using StringFormat sfCentrado = new StringFormat
+            {
+                Alignment = StringAlignment.Center,
+                LineAlignment = StringAlignment.Center,
+                FormatFlags = StringFormatFlags.NoWrap
+            };
             using Font fontNombre = new Font("Segoe UI", 7.5F, FontStyle.Regular);
             using Brush brushTextoBlanco = new SolidBrush(Color.White);
             using Brush brushTextoDimmed = new SolidBrush(Color.FromArgb(170, 255, 255, 255));
@@ -1273,9 +1282,9 @@ namespace TransporteUrbanoEDD.UI.Controles
                 }
                 else if (esDestino)
                 {
-                    // Nodo Destino (Rojo)
-                    colorNodo = Color.FromArgb(220, 38, 38);
-                    colorBorde = Color.FromArgb(153, 27, 27);
+                    // Nodo Destino (#E11D48 -> 225, 29, 72)
+                    colorNodo = EstiloUI.MapaNodoDestino;
+                    colorBorde = Color.FromArgb(159, 18, 57);
                 }
                 else if (enRutaGanadora)
                 {
@@ -1291,8 +1300,8 @@ namespace TransporteUrbanoEDD.UI.Controles
                 }
                 else
                 {
-                    // Nodo estándar (Gris Pizarra)
-                    colorNodo = Color.FromArgb(71, 85, 105);
+                    // Nodo estándar (#334155 -> 51, 65, 85)
+                    colorNodo = EstiloUI.MapaNodoNormal;
                     colorBorde = Color.FromArgb(30, 41, 59);
                 }
 
@@ -1318,15 +1327,18 @@ namespace TransporteUrbanoEDD.UI.Controles
                     g.DrawEllipse(penBorde, rectNodo);
                 }
 
-                // Código en el centro del nodo
-                SizeF sizeCod = g.MeasureString(p.Codigo, fontCodigo);
+                // Código en el centro del nodo (centrado exacto horizontal y vertical)
                 Brush brushTextoC = atenuar ? brushTextoDimmed : brushTextoBlanco;
-                g.DrawString(p.Codigo, fontCodigo, brushTextoC, cx - (sizeCod.Width / 2f), cy - (sizeCod.Height / 2f));
+                g.DrawString(p.Codigo, fontCodigo, brushTextoC, rectNodo, sfCentrado);
 
                 // Píldora compacta con sombra suave semitransparente debajo del nodo para el nombre
+                // Margen extra de +14px de ancho y +4px de alto centrando el texto adentro
                 SizeF sizeNom = g.MeasureString(p.Nombre, fontNombre);
-                float pillY = cy + radio + 3.5f;
-                RectangleF rectNom = new RectangleF(cx - (sizeNom.Width / 2f) - 4, pillY, sizeNom.Width + 8, sizeNom.Height + 2.5f);
+                float pillAncho = sizeNom.Width + 14f;
+                float pillAlto = sizeNom.Height + 4f;
+                float pillX = cx - (pillAncho / 2f);
+                float pillY = cy + radio + 4f;
+                RectangleF rectNom = new RectangleF(pillX, pillY, pillAncho, pillAlto);
 
                 if (!atenuar)
                 {
@@ -1339,7 +1351,7 @@ namespace TransporteUrbanoEDD.UI.Controles
 
                 g.FillRoundedRectangle(brushPill, rectNom, 3);
                 g.DrawRoundedRectangle(penPill, rectNom, 3);
-                g.DrawString(p.Nombre, fontNombre, brushTextoN, rectNom.X + 4, rectNom.Y + 1f);
+                g.DrawString(p.Nombre, fontNombre, brushTextoN, rectNom, sfCentrado);
             }
         }
 
@@ -1392,11 +1404,11 @@ namespace TransporteUrbanoEDD.UI.Controles
 
             g.DrawString("Leyenda del Mapa", fontT, brushT, x + 8, y + 6);
 
-            DibujarItemLeyenda(g, x + 8, y + 25, Color.FromArgb(37, 99, 235), "Parada Origen", fontItem, brushT);
-            DibujarItemLeyenda(g, x + 8, y + 45, Color.FromArgb(220, 38, 38), "Parada Destino", fontItem, brushT);
-            DibujarItemLeyenda(g, x + 8, y + 65, Color.FromArgb(22, 163, 74), "Ruta Óptima (Dijkstra)", fontItem, brushT);
-            DibujarItemLeyenda(g, x + 8, y + 85, Color.FromArgb(217, 119, 6), "Visitada en Recorrido", fontItem, brushT);
-            DibujarItemLeyenda(g, x + 8, y + 105, Color.FromArgb(71, 85, 105), "Parada Estándar", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 25, EstiloUI.MapaNodoOrigen, "Parada Origen", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 45, EstiloUI.MapaNodoDestino, "Parada Destino", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 65, EstiloUI.MapaRutaOptima, "Ruta Óptima (Dijkstra)", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 85, EstiloUI.MapaVisitado, "Visitada en Recorrido", fontItem, brushT);
+            DibujarItemLeyenda(g, x + 8, y + 105, EstiloUI.MapaNodoNormal, "Parada Estándar", fontItem, brushT);
         }
 
         private void DibujarItemLeyenda(Graphics g, int x, int y, Color color, string texto, Font font, Brush brushTexto)

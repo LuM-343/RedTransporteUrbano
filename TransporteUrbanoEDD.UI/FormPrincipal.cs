@@ -64,17 +64,17 @@ namespace TransporteUrbanoEDD.UI
 
             // Pestaña 1: gestión de paradas y zonas (I1)
             vistaParadas = new VistaParadasControl { Dock = DockStyle.Fill };
-            TabPage tab1 = new TabPage("1. Paradas y Zonas");
+            TabPage tab1 = new TabPage("1. Paradas y Zonas") { BackColor = EstiloUI.Fondo };
             tab1.Controls.Add(vistaParadas);
 
             // Pestaña 2: buscador con autocompletado y ruta por nombre
             vistaBuscador = new VistaBuscadorControl { Dock = DockStyle.Fill };
-            TabPage tab2 = new TabPage("2. Buscador");
+            TabPage tab2 = new TabPage("2. Buscador") { BackColor = EstiloUI.Fondo };
             tab2.Controls.Add(vistaBuscador);
 
             // Pestaña 3: rutas, recorridos y mapa (I3)
             vistaRutas = new VistaRutasGrafoControl { Dock = DockStyle.Fill };
-            TabPage tab3 = new TabPage("3. Rutas y Mapa");
+            TabPage tab3 = new TabPage("3. Rutas y Mapa") { BackColor = EstiloUI.Fondo };
             tab3.Controls.Add(vistaRutas);
 
             pestanas.TabPages.Add(tab1);
@@ -86,7 +86,7 @@ namespace TransporteUrbanoEDD.UI
         // Barra inferior con el estado general del sistema
         private void CrearBarraEstado()
         {
-            StatusStrip barra = new StatusStrip { BackColor = Color.FromArgb(30, 41, 59), SizingGrip = false };
+            StatusStrip barra = new StatusStrip { BackColor = EstiloUI.Encabezado, SizingGrip = false };
             lblEstado = new ToolStripStatusLabel { ForeColor = Color.White, Font = new Font("Segoe UI", 9F) };
             barra.Items.Add(lblEstado);
             Controls.Add(barra);
